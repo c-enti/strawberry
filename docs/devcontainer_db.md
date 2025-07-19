@@ -1,6 +1,6 @@
 # DevContainer Database Health Check System
 
-This document describes the database health check system implemented in `scripts/devcontainer_db_health_check.sh`.
+This document describes the database health check system implemented in `scripts/devcontainer_db_health_check.sh`. For a complete summary of the current configuration and implementation status, see the [Current Config](#current-config) section at the end of this document.
 
 ## Overview
 
@@ -8,13 +8,13 @@ The health check script ensures that the PostgreSQL database is properly configu
 
 ## Prerequisites
 
-The following environment variables must be available to the database container, typically via a `.env` file:
+The following environment variables must be available to the database container:
 
 - `POSTGRES_USER`: Database user
 - `POSTGRES_PASSWORD`: Database password
 - `POSTGRES_DB`: Target database name
 
-> **Note:** In most setups, the `.env` file is automatically generated or populated by GitHub secrets (in CI/CD) or Codespaces secrets. Manual setting is usually not required unless running locally outside these environments.
+> **Note:** These environment variables are injected via GitHub secrets (in CI/CD) or Codespaces secrets. Local development may use a `.env` file, but this approach is being deprecated.
 
 ## Process Stages
 
@@ -57,11 +57,11 @@ The following environment variables must be available to the database container,
 
 ### Priority: Environment Setup Migration
 
-**IMPORTANT:** Environment variable setup (.env creation) is only required for local/manual development. In standard Codespaces or CI/CD workflows, environment variables are injected via GitHub secrets and `.env` is not needed. After the db health script is successfully upgraded to rely solely on injected secrets, remove any `.env` creation logic from devcontainer lifecycle hooks and scripts.
+**IMPORTANT:** The health check script will rely solely on environment variables injected via GitHub/Codespaces secrets. All `.env` file creation and handling logic will be removed from the scripts and devcontainer lifecycle hooks.
 
 - **Why**: Environment setup is an initialization concern, not a health check concern
 - **Impact**: Improved reliability, cleaner separation of concerns
-- **Implementation**: Use devcontainer postCreateCommand or initializeCommand to create .env only for local/manual setups. For Codespaces/GitHub secrets, rely on injected environment variables.
+- **Implementation**: Remove `.env` handling entirely, rely on injected environment variables
 - **Benefit**: Health check script remains focused on its core purpose
 - **Status**: High priority, blocks other improvements
 
@@ -80,10 +80,10 @@ The following improvements will better align the script with devcontainer best p
 
 1. **Environment Variable Management**
 
-   - **Current**: Relies on shell environment variables
-   - **Target**: Use Docker Compose's `.env` file approach
-   - **Rationale**: Align with Docker Compose and devcontainer conventions
-   - **Impact**: More consistent environment handling across containers
+   - **Current**: Mixed approach with shell variables and `.env` files
+   - **Target**: Use only injected environment variables from secrets
+   - **Rationale**: Cleaner separation of concerns, more secure
+   - **Impact**: More consistent and secure environment handling
 
 2. **Container Lifecycle Management**
 
@@ -106,21 +106,14 @@ The following improvements will better align the script with devcontainer best p
    - **Rationale**: Follow VS Code workspace conventions
    - **Impact**: Better integration with VS Code environment
 
-5. **Container Naming**
-
-   - **Current**: Assumes default Docker Compose naming
-   - **Target**: Support devcontainer naming conventions
-   - **Rationale**: Prevent naming conflicts
-   - **Impact**: More reliable container identification
-
-6. **Health Check Implementation**
+5. **Health Check Implementation**
 
    - **Current**: Custom health check logic
    - **Target**: Use Docker's built-in health checks
    - **Rationale**: Leverage platform capabilities
    - **Impact**: More standardized health monitoring
 
-7. **Lifecycle Integration**
+6. **Lifecycle Integration**
    - **Current**: Standalone script execution
    - **Target**: Integration with devcontainer hooks
    - **Rationale**: Better automation and initialization
@@ -141,10 +134,56 @@ This is typically executed during development container setup or when verifying 
 The following actionable items correspond to the upgrades and improvements outlined above. Check off each item as it is implemented:
 
 - [x] Migrate script from zsh to bash for compatibility
-- [x] Source environment variables from `.env` file (Docker Compose approach)
+- [ ] Remove `.env` file handling in favor of injected secrets
 - [ ] Check container state before operations (avoid forced recreation)
-- [x] Use devcontainer.json for path resolution (support flexible docker-compose.yml locations)
-- [x] Use devcontainer's workspaceFolder for workspace integration
-- [ ] Support devcontainer naming conventions for containers
+- [ ] Use devcontainer.json for path resolution (support flexible docker-compose.yml locations)
+- [ ] Use devcontainer's workspaceFolder for workspace integration
 - [ ] Use Docker's built-in health checks for database readiness
 - [ ] Integrate script with devcontainer lifecycle hooks for automation
+
+## Current Config
+
+Current configuration summary based on project documentation and configuration files:
+
+1. Project Structure:
+
+   - ChronosCraft AI project (codename: Strawberry-Vanilla)
+   - Split into `client/` (React/Next.js frontend), `server/` (Node.js/Express backend)
+   - Uses `.devcontainer/` for development environment configuration
+   - Includes `shared/` for common code and `scripts/` for utilities
+
+2. DevContainer Setup:
+
+   - Name: "ChronosCraft v0.1 (Alpha)"
+   - Uses Docker Compose with two services
+   - Workspace folder: `/workspaces/${localWorkspaceFolderBasename}`
+   - Lifecycle hooks:
+     - Post-create: Installs dependencies in all workspaces
+     - Post-attach: Runs client and server dev servers concurrently
+
+3. Docker Compose Configuration:
+
+   - Two services:
+     1. `app`: Main development container
+        - Built from local Dockerfile
+        - Mounts project at `/workspaces`
+        - Depends on `db` service
+     2. `db`: PostgreSQL 16 database
+        - Uses official postgres:16 image
+        - Persistent storage via `postgres-data` volume
+        - Configurable via environment variables
+        - Exposed on port 5432
+
+4. Database Health Check System:
+   - Script: `scripts/devcontainer_db_health_check.sh`
+   - Validates environment setup and database connectivity
+   - Uses environment variables for configuration
+   - Recently completed improvements:
+     - Migration from zsh to bash
+   - Pending improvements:
+     - Environment variables from secrets
+     - Path resolution using devcontainer.json
+     - Workspace integration using workspaceFolder
+     - Container state checking
+     - Built-in Docker health checks
+     - Devcontainer lifecycle hook integration
