@@ -232,20 +232,84 @@ if ! verify_auth "$COMPOSE_FILE"; then
     exit 1
 fi
 
-# Attempt application integration using Prisma
-echo "[4/4] Testing Prisma integration..."
-docker compose -f "$COMPOSE_FILE" exec \
-    -e POSTGRES_USER="$POSTGRES_USER" \
-    -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
-    -e POSTGRES_DB="$POSTGRES_DB" \
-    -e DATABASE_URL="$DATABASE_URL" \
-    -w /chronos app bash -c "cd server && npx prisma db push"
-RESULT=$?
+# Function to verify application integration
+verify_app_integration() {
+    local compose_file="$1"
+    local max_attempts=2
+    local attempt=1
+    local timeout=5
+    
+    echo "[4/4] Testing application integration..."
+    echo "• Verifying Prisma ORM connectivity"
+    
+    while [ $attempt -le $max_attempts ]; do
+        echo "Attempt $attempt/$max_attempts:"
+        
+        # Step 1: Check Prisma CLI availability
+        echo "• Checking Prisma CLI..."
+        if ! docker compose -f "$compose_file" exec \
+            -w /chronos/server app \
+            bash -c "npx prisma -v" >/dev/null 2>&1; then
+            echo "! Prisma CLI not found, installing..."
+            docker compose -f "$compose_file" exec \
+                -w /chronos/server app \
+                bash -c "npm install prisma --save-dev" >/dev/null 2>&1
+        else
+            echo "✓ Prisma CLI is available"
+        fi
+        
+        # Step 2: Validate schema
+        echo "• Validating Prisma schema..."
+        if docker compose -f "$compose_file" exec \
+            -w /chronos/server app \
+            bash -c "npx prisma validate" >/dev/null 2>&1; then
+            echo "✓ Schema validation successful"
+        else
+            echo "! Invalid schema detected"
+            attempt=$((attempt + 1))
+            sleep $timeout
+            continue
+        fi
+        
+        # Step 3: Test database push
+        echo "• Testing database synchronization..."
+        if docker compose -f "$compose_file" exec \
+            -e POSTGRES_USER="$POSTGRES_USER" \
+            -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            -e POSTGRES_DB="$POSTGRES_DB" \
+            -e DATABASE_URL="$DATABASE_URL" \
+            -w /chronos/server app \
+            bash -c "npx prisma db push" >/dev/null 2>&1; then
+            echo "✓ Database schema synchronized"
+            
+            # Step 4: Verify client generation
+            echo "• Generating Prisma Client..."
+            if docker compose -f "$compose_file" exec \
+                -w /chronos/server app \
+                bash -c "npx prisma generate" >/dev/null 2>&1; then
+                echo "✓ Prisma Client generated successfully"
+                echo "✓ Application integration complete"
+                return 0
+            else
+                echo "! Failed to generate Prisma Client"
+            fi
+        else
+            echo "! Failed to synchronize database schema"
+        fi
+        
+        attempt=$((attempt + 1))
+        sleep $timeout
+    done
+    
+    echo "✗ Application integration failed after $max_attempts attempts"
+    return 1
+}
 
-if [[ $RESULT -eq 0 ]]; then
-    echo "✓ Prisma successfully connected to the database"
-    exit 0
-else
-    echo "✗ Prisma integration failed. Check logs and configuration"
+# Verify application integration
+if ! verify_app_integration "$COMPOSE_FILE"; then
+    echo "Failed to verify application integration"
     exit 1
 fi
+
+echo "✅ All health checks passed successfully"
+exit 0
