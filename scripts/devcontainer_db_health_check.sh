@@ -10,22 +10,73 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR/.."
 cd "$REPO_ROOT"
 
-# Check required environment variables - should be injected by GitHub/Codespaces secrets
-if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$POSTGRES_DB" ]; then
-  echo "\n❌ ERROR: One or more required environment variables are not set."
-  echo "POSTGRES_USER: ${POSTGRES_USER:-<unset>}"
-  if [ -z "$POSTGRES_PASSWORD" ]; then
-    echo "POSTGRES_PASSWORD: <unset>"
-  else
-    echo "POSTGRES_PASSWORD: <set>"
-  fi
-  echo "POSTGRES_DB: ${POSTGRES_DB:-<unset>}"
-  echo "\nPlease ensure these variables are set in your GitHub/Codespaces secrets."
-  exit 2
+# Function to validate environment variables
+validate_environment() {
+    local has_error=0
+    local error_msg=""
+
+    # Check POSTGRES_USER
+    if [ -z "$POSTGRES_USER" ]; then
+        error_msg+="\n- POSTGRES_USER is not set"
+        has_error=1
+    elif [[ ! "$POSTGRES_USER" =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]; then
+        error_msg+="\n- POSTGRES_USER contains invalid characters (must start with letter, contain only letters, numbers, underscores)"
+        has_error=1
+    fi
+
+    # Check POSTGRES_PASSWORD
+    if [ -z "$POSTGRES_PASSWORD" ]; then
+        error_msg+="\n- POSTGRES_PASSWORD is not set"
+        has_error=1
+    elif [ ${#POSTGRES_PASSWORD} -lt 8 ]; then
+        error_msg+="\n- POSTGRES_PASSWORD is too short (minimum 8 characters)"
+        has_error=1
+    fi
+
+    # Check POSTGRES_DB
+    if [ -z "$POSTGRES_DB" ]; then
+        error_msg+="\n- POSTGRES_DB is not set"
+        has_error=1
+    elif [[ ! "$POSTGRES_DB" =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]; then
+        error_msg+="\n- POSTGRES_DB contains invalid characters (must start with letter, contain only letters, numbers, underscores)"
+        has_error=1
+    fi
+
+    # Check DB port (if specified)
+    if [ ! -z "$POSTGRES_PORT" ] && ! [[ "$POSTGRES_PORT" =~ ^[0-9]+$ ]]; then
+        error_msg+="\n- POSTGRES_PORT must be a valid number"
+        has_error=1
+    fi
+
+    # If any errors were found, display them and exit
+    if [ $has_error -eq 1 ]; then
+        echo -e "\n❌ ERROR: Environment validation failed:$error_msg"
+        echo -e "\nCurrent values:"
+        echo "POSTGRES_USER: ${POSTGRES_USER:-<unset>}"
+        if [ -z "$POSTGRES_PASSWORD" ]; then
+            echo "POSTGRES_PASSWORD: <unset>"
+        else
+            echo "POSTGRES_PASSWORD: <set>"
+        fi
+        echo "POSTGRES_DB: ${POSTGRES_DB:-<unset>}"
+        echo "POSTGRES_PORT: ${POSTGRES_PORT:-5432}"
+        echo -e "\nPlease ensure these variables are set correctly in your GitHub/Codespaces secrets."
+        return 1
+    fi
+
+    # All validations passed
+    echo "✅ Environment validation passed"
+    return 0
+}
+
+# Validate environment variables
+if ! validate_environment; then
+    exit 2
 fi
 
-# The environment variables should already be set in the system
-export DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@db:5432/$POSTGRES_DB"
+# Set database URL with optional custom port
+POSTGRES_PORT=${POSTGRES_PORT:-5432}
+export DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@db:$POSTGRES_PORT/$POSTGRES_DB"
 
 # Always run from the repo root so relative paths work
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
