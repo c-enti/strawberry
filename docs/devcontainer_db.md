@@ -149,7 +149,7 @@ The following actionable items correspond to the upgrades and improvements outli
 - [x] Remove `.env` file handling in favor of injected secrets
 - [x] Check container state before operations (avoid forced recreation)
 - [ ] Infrastructure setup:
-  - [ ] Use devcontainer.json for path resolution (support flexible docker-compose.yml locations)
+  - [x] Use devcontainer.json for path resolution (support flexible docker-compose.yml locations)
   - [ ] Use devcontainer's workspaceFolder for workspace integration
 - [ ] Implement staged health checks:
   - [x] Fast-fail environment validation

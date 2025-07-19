@@ -118,12 +118,71 @@ check_container_state() {
     esac
 }
 
-# Always run from the repo root so relative paths work
+# Function to get configuration from devcontainer.json
+get_devcontainer_config() {
+    local script_dir="$1"
+    local repo_root="$2"
+    local devcontainer_paths=(
+        "$repo_root/.devcontainer/devcontainer.json"
+        "$repo_root/.devcontainer.json"
+    )
+    local compose_file=""
+    local workspace_folder=""
+    
+    # Find devcontainer.json
+    for dc_path in "${devcontainer_paths[@]}"; do
+        if [ -f "$dc_path" ]; then
+            echo "• Found devcontainer config: $dc_path"
+            
+            # Parse dockerComposeFile
+            if compose_path=$(grep -o '"dockerComposeFile":[[:space:]]*"[^"]*"' "$dc_path" | cut -d'"' -f4); then
+                if [[ "$compose_path" == /* ]]; then
+                    # Absolute path
+                    compose_file="$compose_path"
+                else
+                    # Relative to devcontainer.json
+                    compose_file="$(dirname "$dc_path")/$compose_path"
+                fi
+                echo "✓ Found docker-compose path: $compose_file"
+            else
+                echo "! No dockerComposeFile specified in devcontainer.json"
+                return 1
+            fi
+            
+            # Parse workspaceFolder
+            if workspace_path=$(grep -o '"workspaceFolder":[[:space:]]*"[^"]*"' "$dc_path" | cut -d'"' -f4); then
+                workspace_folder="$workspace_path"
+                echo "✓ Found workspace folder: $workspace_folder"
+            else
+                echo "! No workspaceFolder specified in devcontainer.json"
+                return 1
+            fi
+            
+            # Export variables for use in script
+            export DC_COMPOSE_FILE="$compose_file"
+            export DC_WORKSPACE_FOLDER="$workspace_folder"
+            return 0
+        fi
+    done
+    
+    echo "! No devcontainer.json found in standard locations"
+    return 1
+}
+
+# Always run from the repo root for consistent paths
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR/.."
 cd "$REPO_ROOT"
 
-COMPOSE_FILE=".devcontainer/docker-compose.yml"
+# Get configuration from devcontainer.json
+echo "Reading devcontainer configuration..."
+if ! get_devcontainer_config "$SCRIPT_DIR" "$REPO_ROOT"; then
+    echo "Failed to read devcontainer configuration"
+    exit 2
+fi
+
+# Use docker-compose file from devcontainer config
+COMPOSE_FILE="$DC_COMPOSE_FILE"
 
 # Start containers
 printf "\n[1/3] Managing containers...\n"
