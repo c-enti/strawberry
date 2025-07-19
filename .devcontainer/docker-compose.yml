@@ -9,14 +9,14 @@ services:
       context: .
       dockerfile: Dockerfile
       # dockerfile: .devcontainer/Dockerfile
-    
+
     # This command keeps the container running, so the dev environment doesn't exit
     command: sleep infinity
 
     # Mount your project code into the container
     volumes:
       - ..:/workspaces:cached
-    
+
     # Depend on the 'db' service. This ensures 'db' starts before 'app'
     depends_on:
       - db
@@ -25,15 +25,23 @@ services:
   db:
     # Use an official PostgreSQL image
     image: postgres:16
-    
+
+    # Configure Docker's built-in health check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
     # Restart the container automatically if it stops
     restart: unless-stopped
-    
+
     # Mount a volume to persist database data.
     # This is crucial so your data isn't lost when you stop/restart the container.
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      
+
     # Expose the PostgreSQL port to the host machine (optional, but good for debugging)
     ports:
       - "5432:5432"

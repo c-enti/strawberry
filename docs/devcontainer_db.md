@@ -157,7 +157,7 @@ The following actionable items correspond to the upgrades and improvements outli
   - [x] Authentication verification
   - [x] Application integration testing
 - [ ] Container health monitoring:
-  - [ ] Configure Docker's built-in HEALTHCHECK directive
+  - [x] Configure Docker's built-in HEALTHCHECK directive
   - [ ] Integrate health checks with container lifecycle
 - [ ] Final integration:
   - [ ] Integrate script with devcontainer lifecycle hooks for automation
@@ -194,6 +194,11 @@ Current configuration summary based on project documentation and configuration f
         - Persistent storage via `postgres-data` volume
         - Configurable via environment variables
         - Exposed on port 5432
+        - Built-in health check using pg_isready
+          - Interval: 10s
+          - Timeout: 5s
+          - Retries: 3
+          - Start period: 10s
 
 4. Database Health Check System:
    - Script: `scripts/devcontainer_db_health_check.sh`
