@@ -139,37 +139,16 @@ get_devcontainer_config() {
             echo "• Found devcontainer config: $dc_path"
             
             # Parse dockerComposeFile
-            if compose_path=$(grep -o '"dockerComposeFile":[[:space:]]*"[^"]*"' "$dc_path" | cut -d'"' -f4); then
-                if [[ "$compose_path" == /* ]]; then
-                    # Absolute path
-                    compose_file="$compose_path"
-                else
-                    # Relative path - normalize paths first
-                    dc_dir=$(cd "$(dirname "$dc_path")" && pwd)
-                    if [ -f "$dc_dir/$compose_path" ]; then
-                        # File exists relative to devcontainer.json
-                        compose_file="$dc_dir/$compose_path"
-                        echo "• Found compose file relative to devcontainer.json"
-                    elif [ -f "$repo_root/$compose_path" ]; then
-                        # File exists relative to workspace root
-                        compose_file="$repo_root/$compose_path"
-                        echo "• Found compose file relative to workspace root"
-                    else
-                        echo "! Docker compose file not found in either:"
-                        echo "  - $dc_dir/$compose_path"
-                        echo "  - $repo_root/$compose_path"
-                        return 1
-                    fi
-                fi
-                echo "✓ Found docker-compose path: $compose_file"
-                if [ ! -f "$compose_file" ]; then
-                    echo "! Docker compose file not found at: $compose_file"
-                    return 1
-                fi
-            else
-                echo "! No dockerComposeFile specified in devcontainer.json"
+            # Per specification: "Container configuration is read from .devcontainer/docker-compose.yml"
+            dc_dir="$repo_root/.devcontainer"
+            compose_file="$dc_dir/docker-compose.yml"
+            
+            if [ ! -f "$compose_file" ]; then
+                echo "! Docker compose file not found at: $compose_file"
+                echo "  Per specification, docker-compose.yml must be in .devcontainer directory"
                 return 1
             fi
+            echo "✓ Found docker-compose.yml in .devcontainer directory"
             
             # Parse workspaceFolder
             if workspace_path=$(grep -o '"workspaceFolder":[[:space:]]*"[^"]*"' "$dc_path" | cut -d'"' -f4); then
