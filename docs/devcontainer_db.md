@@ -134,7 +134,7 @@ This is typically executed during development container setup or when verifying 
 The following actionable items correspond to the upgrades and improvements outlined above. Check off each item as it is implemented:
 
 - [x] Migrate script from zsh to bash for compatibility
-- [ ] Remove `.env` file handling in favor of injected secrets
+- [x] Remove `.env` file handling in favor of injected secrets
 - [ ] Check container state before operations (avoid forced recreation)
 - [ ] Use devcontainer.json for path resolution (support flexible docker-compose.yml locations)
 - [ ] Use devcontainer's workspaceFolder for workspace integration

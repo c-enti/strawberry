@@ -10,20 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR/.."
 cd "$REPO_ROOT"
 
-# Source environment variables from .env file if present
-if [ -f .env ]; then
-  set -a
-  . ./.env
-  set +a
-else
-  echo "\n❌ ERROR: .env file not found in repository root."
-  echo "Please ensure a .env file exists and contains POSTGRES_USER, POSTGRES_PASSWORD, and POSTGRES_DB."
-  exit 2
-fi
-
-# Check required environment variables
+# Check required environment variables - should be injected by GitHub/Codespaces secrets
 if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$POSTGRES_DB" ]; then
-  echo "\n❌ ERROR: One or more required environment variables are not set after sourcing .env."
+  echo "\n❌ ERROR: One or more required environment variables are not set."
   echo "POSTGRES_USER: ${POSTGRES_USER:-<unset>}"
   if [ -z "$POSTGRES_PASSWORD" ]; then
     echo "POSTGRES_PASSWORD: <unset>"
@@ -31,7 +20,7 @@ if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$POSTGRES_DB"
     echo "POSTGRES_PASSWORD: <set>"
   fi
   echo "POSTGRES_DB: ${POSTGRES_DB:-<unset>}"
-  echo "\nPlease ensure your .env file contains these variables."
+  echo "\nPlease ensure these variables are set in your GitHub/Codespaces secrets."
   exit 2
 fi
 
