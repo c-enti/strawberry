@@ -148,16 +148,19 @@ The following actionable items correspond to the upgrades and improvements outli
 - [x] Migrate script from zsh to bash for compatibility
 - [x] Remove `.env` file handling in favor of injected secrets
 - [x] Check container state before operations (avoid forced recreation)
-- [ ] Use devcontainer.json for path resolution (support flexible docker-compose.yml locations)
-- [ ] Use devcontainer's workspaceFolder for workspace integration
+- [ ] Infrastructure setup:
+  - [ ] Use devcontainer.json for path resolution (support flexible docker-compose.yml locations)
+  - [ ] Use devcontainer's workspaceFolder for workspace integration
 - [ ] Implement staged health checks:
   - [x] Fast-fail environment validation
   - [x] Basic connection verification
   - [x] Authentication verification
   - [x] Application integration testing
-- [ ] Configure Docker's built-in HEALTHCHECK directive
-- [ ] Integrate health checks with container lifecycle
-- [ ] Integrate script with devcontainer lifecycle hooks for automation
+- [ ] Container health monitoring:
+  - [ ] Configure Docker's built-in HEALTHCHECK directive
+  - [ ] Integrate health checks with container lifecycle
+- [ ] Final integration:
+  - [ ] Integrate script with devcontainer lifecycle hooks for automation
 
 ## Current Config
 
