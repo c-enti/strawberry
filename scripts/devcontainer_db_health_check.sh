@@ -128,6 +128,10 @@ get_devcontainer_config() {
     )
     local compose_file=""
     local workspace_folder=""
+    local basename
+    
+    # Get workspace folder basename
+    basename=$(basename "$repo_root")
     
     # Find devcontainer.json
     for dc_path in "${devcontainer_paths[@]}"; do
@@ -151,16 +155,40 @@ get_devcontainer_config() {
             
             # Parse workspaceFolder
             if workspace_path=$(grep -o '"workspaceFolder":[[:space:]]*"[^"]*"' "$dc_path" | cut -d'"' -f4); then
-                workspace_folder="$workspace_path"
+                # Expand variables in workspace path
+                workspace_folder=$(echo "$workspace_path" | sed "s/\${localWorkspaceFolderBasename}/$basename/g")
+                
+                # Validate workspace folder
+                if [[ "$workspace_folder" != /* ]]; then
+                    echo "! workspaceFolder must be an absolute path"
+                    return 1
+                fi
+                
                 echo "✓ Found workspace folder: $workspace_folder"
+                
+                # Export host-side workspace path
+                export DC_HOST_WORKSPACE="$repo_root"
             else
                 echo "! No workspaceFolder specified in devcontainer.json"
                 return 1
             fi
             
-            # Export variables for use in script
+            # Helper function for path translation
+            translate_path() {
+                local path="$1"
+                local direction="$2" # host-to-container or container-to-host
+                
+                if [ "$direction" = "host-to-container" ]; then
+                    echo "$path" | sed "s|^$DC_HOST_WORKSPACE|$DC_WORKSPACE_FOLDER|"
+                else
+                    echo "$path" | sed "s|^$DC_WORKSPACE_FOLDER|$DC_HOST_WORKSPACE|"
+                fi
+            }
+            
+            # Export variables and functions for use in script
             export DC_COMPOSE_FILE="$compose_file"
             export DC_WORKSPACE_FOLDER="$workspace_folder"
+            export -f translate_path
             return 0
         fi
     done
