@@ -140,21 +140,46 @@ elif [ $db_result -ne 0 ]; then
     docker compose -f "$COMPOSE_FILE" up -d --force-recreate
 fi
 
-echo "[2/3] Waiting for database to be ready..."
-# Wait for the db to be ready (max 30s)
-for i in $(seq 1 15); do
-  if docker compose -f .devcontainer/docker-compose.yml exec db pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" > /dev/null 2>&1; then
-    echo "Database is ready!"
-    break
-  else
-    echo "  ...waiting ($i)"
-    sleep 2
-  fi
-  if [ $i -eq 15 ]; then
-    echo "Database did not become ready in time."
+# Function to verify basic database connectivity
+verify_connection() {
+    local compose_file="$1"
+    local max_attempts=15
+    local attempt=1
+    local timeout=2
+    local total_timeout=$((max_attempts * timeout))
+    
+    echo "[2/3] Verifying database connectivity..."
+    echo "• Attempting connection (timeout: ${total_timeout}s)"
+    
+    while [ $attempt -le $max_attempts ]; do
+        # Try basic TCP connection first (faster than pg_isready)
+        if docker compose -f "$compose_file" exec db nc -z localhost 5432 >/dev/null 2>&1; then
+            echo "✓ TCP connection successful"
+            
+            # Then check if PostgreSQL is accepting connections
+            if docker compose -f "$compose_file" exec db pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+                echo "✓ PostgreSQL is accepting connections"
+                return 0
+            else
+                echo "! PostgreSQL process not ready (attempt $attempt/$max_attempts)"
+            fi
+        else
+            echo "! Port 5432 not responding (attempt $attempt/$max_attempts)"
+        fi
+        
+        sleep $timeout
+        attempt=$((attempt + 1))
+    done
+    
+    echo "✗ Database connection verification failed after ${total_timeout} seconds"
+    return 1
+}
+
+echo "[2/3] Verifying database connectivity..."
+if ! verify_connection "$COMPOSE_FILE"; then
+    echo "Failed to establish basic database connectivity"
     exit 1
-  fi
-done
+fi
 
 # Attempt a connection using Prisma (from app container)
 echo "[3/3] Testing Prisma connection..."
