@@ -78,14 +78,67 @@ fi
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 export DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@db:$POSTGRES_PORT/$POSTGRES_DB"
 
+# Function to check container state and act accordingly
+check_container_state() {
+    local compose_file="$1"
+    local service_name="$2"
+    
+    # Check if service exists in compose file
+    if ! docker compose -f "$compose_file" ps "$service_name" >/dev/null 2>&1; then
+        echo "Service '$service_name' not found in $compose_file"
+        return 1
+    fi
+    
+    # Get container state
+    local state=$(docker compose -f "$compose_file" ps --format json "$service_name" | grep -o '"State":"[^"]*"' | cut -d'"' -f4)
+    
+    case "$state" in
+        "running")
+            echo "✓ Container $service_name is running"
+            return 0
+            ;;
+        "exited")
+            echo "! Container $service_name has exited, restarting..."
+            docker compose -f "$compose_file" start "$service_name"
+            return $?
+            ;;
+        "created")
+            echo "! Container $service_name is created but not running, starting..."
+            docker compose -f "$compose_file" start "$service_name"
+            return $?
+            ;;
+        "")
+            echo "! Container $service_name doesn't exist, needs to be created..."
+            return 2
+            ;;
+        *)
+            echo "! Container $service_name is in state: $state"
+            return 1
+            ;;
+    esac
+}
+
 # Always run from the repo root so relative paths work
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR/.."
 cd "$REPO_ROOT"
 
+COMPOSE_FILE=".devcontainer/docker-compose.yml"
+
 # Start containers
-printf "\n[1/3] Starting containers...\n"
-docker compose -f .devcontainer/docker-compose.yml up -d --force-recreate
+printf "\n[1/3] Managing containers...\n"
+
+# Check db container state
+db_state=$(check_container_state "$COMPOSE_FILE" "db")
+db_result=$?
+
+if [ $db_result -eq 2 ]; then
+    echo "Creating containers for the first time..."
+    docker compose -f "$COMPOSE_FILE" up -d
+elif [ $db_result -ne 0 ]; then
+    echo "Recreating containers due to invalid state..."
+    docker compose -f "$COMPOSE_FILE" up -d --force-recreate
+fi
 
 echo "[2/3] Waiting for database to be ready..."
 # Wait for the db to be ready (max 30s)
