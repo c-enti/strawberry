@@ -242,18 +242,57 @@ Note: Health check configuration is complete in docker-compose.yml with comprehe
 
 ### Phase 3: Development Integration
 
-- [ ] Integration points implementation:
-  - [ ] Revise post-container creation hook for stability
-  - [ ] Update pre-application startup check
-  - [ ] Create development status monitoring
-- [ ] Testing and validation:
-  - [ ] Document test scenarios
-  - [ ] Create failure simulation tests
-  - [ ] Verify recovery procedures
-  - [ ] Measure performance impact
-  - [ ] Test across different environments (local, Codespaces, CI)
+#### Testing & Validation Framework (Required before integration)
 
-Note: Moving integration to Phase 3 to ensure script stability before integration.
+- [ ] Create test suite infrastructure:
+  - [ ] Create test helper functions for environment simulation
+  - [ ] Add test cases for all exit codes and failure modes
+  - [ ] Implement environment variable manipulation helpers
+  - [ ] Add mocks for PostgreSQL and Prisma responses
+- [ ] Document test scenarios:
+  - [ ] Missing or invalid environment variables
+  - [ ] Network connectivity issues
+  - [ ] Authentication failures
+  - [ ] Database existence checks
+  - [ ] Prisma validation scenarios
+- [ ] Create failure simulation framework:
+  - [ ] Network interruption simulation
+  - [ ] Database restart scenarios
+  - [ ] Invalid credential scenarios
+  - [ ] Schema validation failures
+
+#### Integration Points (After test framework)
+
+- [ ] Create pre-integration validation:
+  - [ ] Verify all required tools available
+  - [ ] Check environment variable injection
+  - [ ] Validate permissions and access
+  - [ ] Test rollback capabilities
+- [ ] Implement integration points:
+  - [ ] Add safe post-container creation hook
+  - [ ] Create recoverable pre-application check
+  - [ ] Implement non-blocking status monitoring
+- [ ] Design recovery procedures:
+  - [ ] Define automatic recovery actions
+  - [ ] Create manual intervention guides
+  - [ ] Document rollback procedures
+
+#### Performance & Reliability
+
+- [ ] Measure and optimize:
+  - [ ] Baseline performance metrics
+  - [ ] Timeout and retry optimizations
+  - [ ] Resource usage analysis
+- [ ] Environment-specific testing:
+  - [ ] Local development validation
+  - [ ] GitHub Codespaces testing
+  - [ ] CI environment verification
+- [ ] Monitoring implementation:
+  - [ ] Add performance tracking
+  - [ ] Create health status reporting
+  - [ ] Implement alert mechanisms
+
+Note: No devcontainer.json modifications until all test scenarios pass.
 
 ### Phase 4: Documentation & Monitoring
 
