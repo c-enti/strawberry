@@ -181,20 +181,71 @@ if ! verify_connection "$COMPOSE_FILE"; then
     exit 1
 fi
 
-# Attempt a connection using Prisma (from app container)
-echo "[3/3] Testing Prisma connection..."
-docker compose -f .devcontainer/docker-compose.yml exec \
-  -e POSTGRES_USER="$POSTGRES_USER" \
-  -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
-  -e POSTGRES_DB="$POSTGRES_DB" \
-  -e DATABASE_URL="$DATABASE_URL" \
-  -w /chronos app bash -c "cd server && npx prisma db push"
+# Function to verify database authentication
+verify_auth() {
+    local compose_file="$1"
+    local max_attempts=3
+    local attempt=1
+    local timeout=2
+    
+    echo "[3/4] Verifying database authentication..."
+    echo "• Testing credentials and database access"
+    
+    while [ $attempt -le $max_attempts ]; do
+        # Try to list databases (requires successful auth)
+        if docker compose -f "$compose_file" exec db psql \
+            -h localhost \
+            -p "${POSTGRES_PORT:-5432}" \
+            -U "$POSTGRES_USER" \
+            -d "$POSTGRES_DB" \
+            -c "\l" >/dev/null 2>&1; then
+            echo "✓ Authentication successful"
+            echo "✓ Database '$POSTGRES_DB' is accessible"
+            return 0
+        else
+            echo "! Authentication failed (attempt $attempt/$max_attempts)"
+            
+            # Check specific failure reasons
+            if docker compose -f "$compose_file" exec db psql \
+                -h localhost \
+                -p "${POSTGRES_PORT:-5432}" \
+                -U "$POSTGRES_USER" \
+                -d postgres \
+                -c "\l" >/dev/null 2>&1; then
+                echo "  → Can authenticate but database '$POSTGRES_DB' might not exist"
+            else
+                echo "  → Invalid credentials or connection refused"
+            fi
+        fi
+        
+        sleep $timeout
+        attempt=$((attempt + 1))
+    done
+    
+    echo "✗ Authentication verification failed after $max_attempts attempts"
+    return 1
+}
+
+echo "[3/4] Verifying database authentication..."
+if ! verify_auth "$COMPOSE_FILE"; then
+    echo "Failed to authenticate with the database"
+    exit 1
+fi
+
+# Attempt application integration using Prisma
+echo "[4/4] Testing Prisma integration..."
+docker compose -f "$COMPOSE_FILE" exec \
+    -e POSTGRES_USER="$POSTGRES_USER" \
+    -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+    -e POSTGRES_DB="$POSTGRES_DB" \
+    -e DATABASE_URL="$DATABASE_URL" \
+    -w /chronos app bash -c "cd server && npx prisma db push"
 RESULT=$?
 
 if [[ $RESULT -eq 0 ]]; then
-  echo "\n✅ Prisma successfully connected to the database."
-  exit 0
+    echo "✓ Prisma successfully connected to the database"
+    exit 0
 else
-  echo "\n❌ Prisma failed to connect to the database. Check logs and configuration."
-  exit 1
+    echo "✗ Prisma integration failed. Check logs and configuration"
+    exit 1
 fi
