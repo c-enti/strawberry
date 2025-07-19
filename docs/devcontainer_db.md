@@ -16,6 +16,49 @@ The following environment variables must be available to the database container:
 
 > **Note:** These environment variables are injected via GitHub secrets (in CI/CD) or Codespaces secrets. Local development may use a `.env` file, but this approach is being deprecated.
 
+## Proposed Health Check Integration
+
+NOTICE: This section describes proposed changes that require review and approval before implementation.
+
+The database health check system should be integrated carefully to avoid disrupting development workflows. Here's the proposed approach:
+
+1. Phase 1: Docker Container Level (Proposed)
+
+   - Add HEALTHCHECK to db service
+   - Implementation requirements:
+     - Must not block container startup
+     - Should use progressive checks
+     - Must have appropriate timeouts
+   - Proposed configuration:
+     - 30s interval with 10s timeout
+     - 3 retries with 30s start period
+   - Success criteria:
+     - Container starts reliably
+     - Health status accurately reflects database state
+     - Does not impact development workflow
+
+2. Phase 2: Development Workflow Integration (Proposed)
+   - Integration points to consider:
+     - Post-container creation
+     - Pre-application startup
+     - During development
+   - Requirements:
+     - Must not block container creation
+     - Should provide clear feedback
+     - Must have fallback mechanisms
+   - Testing strategy needed for:
+     - Various failure scenarios
+     - Recovery procedures
+     - Performance impact
+
+ACTIONABLE ITEMS (Pending Approval):
+
+1. Document detailed testing strategy
+2. Create rollback procedures
+3. Implement and test Docker HEALTHCHECK in isolation
+4. Develop and test integration points
+5. Create monitoring and debugging procedures
+
 ## Process Stages
 
 ### 1. Environment Validation
@@ -157,10 +200,12 @@ The following actionable items correspond to the upgrades and improvements outli
   - [x] Authentication verification
   - [x] Application integration testing
 - [ ] Container health monitoring:
-  - [x] Configure Docker's built-in HEALTHCHECK directive
-  - [ ] Integrate health checks with container lifecycle
-- [ ] Final integration:
-  - [ ] Integrate script with devcontainer lifecycle hooks for automation
+  - [ ] Test and verify standalone health check script
+  - [ ] Document test cases and expected behaviors
+  - [ ] Create troubleshooting guide
+- [ ] Future considerations (requires approval):
+  - [ ] Evaluate Docker HEALTHCHECK integration
+  - [ ] Assess devcontainer lifecycle integration options
 
 ## Current Config
 
@@ -194,6 +239,12 @@ Current configuration summary based on project documentation and configuration f
         - Persistent storage via `postgres-data` volume
         - Configurable via environment variables
         - Exposed on port 5432
+        - Built-in health check with stages:
+          - Environment validation
+          - Basic connectivity check
+          - Authentication verification
+          - 30s check interval with 10s timeout
+          - 3 retries with 30s start period
         - Built-in health check using pg_isready
           - Interval: 10s
           - Timeout: 5s
@@ -204,12 +255,17 @@ Current configuration summary based on project documentation and configuration f
    - Script: `scripts/devcontainer_db_health_check.sh`
    - Validates environment setup and database connectivity
    - Uses environment variables for configuration
-   - Recently completed improvements:
+   - Current focus:
+     - Ensure reliable standalone operation
+     - Comprehensive testing of health check script
+     - Document failure scenarios and recovery
+   - Recently completed:
      - Migration from zsh to bash
-   - Pending improvements:
-     - Environment variables from secrets
-     - Path resolution using devcontainer.json
-     - Workspace integration using workspaceFolder
-     - Container state checking
-     - Built-in Docker health checks
-     - Devcontainer lifecycle hook integration
+   - Next steps:
+     - Test environment variable handling
+     - Verify path resolution logic
+     - Document test cases and results
+     - Create troubleshooting procedures
+   - Future considerations (pending review):
+     - Container integration options
+     - Potential devcontainer integration

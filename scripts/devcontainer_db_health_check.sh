@@ -144,10 +144,28 @@ get_devcontainer_config() {
                     # Absolute path
                     compose_file="$compose_path"
                 else
-                    # Relative to devcontainer.json
-                    compose_file="$(dirname "$dc_path")/$compose_path"
+                    # Relative path - normalize paths first
+                    dc_dir=$(cd "$(dirname "$dc_path")" && pwd)
+                    if [ -f "$dc_dir/$compose_path" ]; then
+                        # File exists relative to devcontainer.json
+                        compose_file="$dc_dir/$compose_path"
+                        echo "• Found compose file relative to devcontainer.json"
+                    elif [ -f "$repo_root/$compose_path" ]; then
+                        # File exists relative to workspace root
+                        compose_file="$repo_root/$compose_path"
+                        echo "• Found compose file relative to workspace root"
+                    else
+                        echo "! Docker compose file not found in either:"
+                        echo "  - $dc_dir/$compose_path"
+                        echo "  - $repo_root/$compose_path"
+                        return 1
+                    fi
                 fi
                 echo "✓ Found docker-compose path: $compose_file"
+                if [ ! -f "$compose_file" ]; then
+                    echo "! Docker compose file not found at: $compose_file"
+                    return 1
+                fi
             else
                 echo "! No dockerComposeFile specified in devcontainer.json"
                 return 1
@@ -161,6 +179,12 @@ get_devcontainer_config() {
                 # Validate workspace folder
                 if [[ "$workspace_folder" != /* ]]; then
                     echo "! workspaceFolder must be an absolute path"
+                    return 1
+                fi
+                
+                # Verify the workspace folder exists
+                if [ ! -d "$repo_root" ]; then
+                    echo "! Repository root directory not found: $repo_root"
                     return 1
                 fi
                 

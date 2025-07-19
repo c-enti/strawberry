@@ -26,13 +26,23 @@ services:
     # Use an official PostgreSQL image
     image: postgres:16
 
-    # Configure Docker's built-in health check
+    # Configure Docker's built-in health check with comprehensive stages
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
+      test: [
+          "CMD-SHELL",
+          "if [ -z \"$$POSTGRES_USER\" ] || [ -z \"$$POSTGRES_PASSWORD\" ] || [ -z \"$$POSTGRES_DB\" ]; then \
+          echo 'Environment validation failed'; exit 1; \
+          elif ! pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB; then \
+          echo 'Basic connectivity check failed'; exit 1; \
+          elif ! psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c '\\l' >/dev/null 2>&1; then \
+          echo 'Authentication verification failed'; exit 1; \
+          else echo 'All health checks passed'; \
+          fi",
+        ]
+      interval: 30s
+      timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 30s
 
     # Restart the container automatically if it stops
     restart: unless-stopped

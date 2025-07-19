@@ -1,6 +1,6 @@
 {
   "name": "ChronosCraft v0.1 (Alpha)",
-  
+
   // --- DOCKER COMPOSE INTEGRATION ---
   // Point to your docker-compose.yml file
   // "dockerComposeFile": "../docker-compose.yml",
@@ -19,11 +19,11 @@
     "env-setup": "touch .env"
   },
   **/
-  
+
   // Wait for the postCreateCommand to complete before allowing connection.
   "waitFor": "onCreateCommand",
 
-  // Install dependencies in all workspaces (shared, client, server).
+  // Install dependencies in all workspaces (shared, client, server)
   "postCreateCommand": "cd shared && npm install && cd ../client && npm install && cd ../server && npm install && cd ..",
 
   // Run client and server development servers concurrently after attaching.
