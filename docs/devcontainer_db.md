@@ -108,10 +108,22 @@ The following improvements will better align the script with devcontainer best p
 
 5. **Health Check Implementation**
 
-   - **Current**: Custom health check logic
-   - **Target**: Use Docker's built-in health checks
-   - **Rationale**: Leverage platform capabilities
-   - **Impact**: More standardized health monitoring
+   - **Current**: Custom health check logic with manual retry loops
+   - **Target**: Use Docker's built-in health checks with standardized stages:
+     1. Environment validation (fast fail)
+     2. Connection verification (basic connectivity)
+     3. Authentication verification (credential testing)
+     4. Application integration (Prisma layer)
+   - **Rationale**:
+     - Leverage Docker's native health monitoring
+     - Standardize health check stages
+     - Improve reliability through proper staging
+     - Better integration with container lifecycle
+   - **Impact**:
+     - More reliable health detection
+     - Clearer failure points
+     - Better integration with Docker ecosystem
+     - Standardized monitoring approach
 
 6. **Lifecycle Integration**
    - **Current**: Standalone script execution
@@ -138,7 +150,13 @@ The following actionable items correspond to the upgrades and improvements outli
 - [ ] Check container state before operations (avoid forced recreation)
 - [ ] Use devcontainer.json for path resolution (support flexible docker-compose.yml locations)
 - [ ] Use devcontainer's workspaceFolder for workspace integration
-- [ ] Use Docker's built-in health checks for database readiness
+- [ ] Implement staged health checks:
+  - [x] Fast-fail environment validation
+  - [ ] Basic connection verification
+  - [ ] Authentication verification
+  - [ ] Application integration testing
+- [ ] Configure Docker's built-in HEALTHCHECK directive
+- [ ] Integrate health checks with container lifecycle
 - [ ] Integrate script with devcontainer lifecycle hooks for automation
 
 ## Current Config
