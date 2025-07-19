@@ -134,3 +134,9 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Archive directories
+docs/addenda/archive/
+**/archive/
+*.bak
+*_bk*
