@@ -16,6 +16,17 @@ The following environment variables must be available to the database container:
 
 > **Note:** These environment variables are injected via GitHub secrets (in CI/CD) or Codespaces secrets. Local development may use a `.env` file, but this approach is being deprecated.
 
+### Architecture Note
+
+The health check operates within the devcontainer environment:
+
+- Database checks run through the `app` service's connection to `db`
+- Direct PostgreSQL access via internal container networking
+- Leverages built-in Docker health check on the `db` service
+- No external Docker access required
+
+> **Important:** The health check script should be run from within the devcontainer environment where all required connectivity and permissions are pre-configured.
+
 ## Proposed Health Check Integration
 
 NOTICE: This section describes proposed changes that require review and approval before implementation.
@@ -68,27 +79,32 @@ ACTIONABLE ITEMS (Pending Approval):
 - Exits with code 2 if any required variables are missing
 - Shows masked password status for security
 
-### 2. Container Management
+### 2. Database Connection Check
 
-- Changes to repository root for consistent path resolution
-- Starts Docker containers via docker-compose
-- Uses `--force-recreate` flag to ensure clean state
-- Container configuration is read from `.devcontainer/docker-compose.yml`
+- Direct PostgreSQL connectivity check
+- Dynamic retry system with exponential backoff
+- Configurable via environment variables:
+  - DB_CHECK_MAX_ATTEMPTS (default: 5)
+  - DB_CHECK_INITIAL_WAIT (default: 2s)
+  - DB_CHECK_MAX_WAIT (default: 30s)
+- Uses `pg_isready` for lightweight availability check
 
-### 3. Database Readiness Check
+### 3. Authentication Verification
 
-- Implements a progressive wait system (max 30 seconds)
-- 15 iterations with 2-second intervals
-- Uses `pg_isready` to verify database availability
-- Provides visual feedback during wait period
-- Exits with code 1 if database isn't ready after timeout
+- Tests full database authentication
+- Uses `psql` to verify credentials
+- Provides detailed error diagnosis:
+  - Database existence check
+  - Authentication verification
+  - Connectivity confirmation
+- Implements same backoff strategy as connection check
 
-### 4. Prisma Connection Verification
+### 4. Optional Prisma Verification
 
-- Tests database connectivity using Prisma
-- Passes environment variables to application container
-- Executes `prisma db push` as connection test
-- Reports success (exit 0) or failure (exit 1)
+- Minimal schema validation only
+- Can be bypassed with SKIP_PRISMA_CHECK=true
+- No database push or client generation
+- Non-blocking for development workflow
 
 ## Exit Codes
 
@@ -186,26 +202,83 @@ This is typically executed during development container setup or when verifying 
 
 ## Actionables
 
-The following actionable items correspond to the upgrades and improvements outlined above. Check off each item as it is implemented:
+The following items represent our implementation plan for the health check system:
+
+### Phase 1: Docker Health Check Integration ✅
+
+- [x] Update db service configuration in docker-compose.yml:
+  - [x] Add HEALTHCHECK directive with specified parameters
+  - [x] Configure timeouts (30s interval, 10s timeout)
+  - [x] Set retry policy (3 retries, 30s start period)
+- [x] Create health check validation script:
+  - [x] Implement progressive check stages
+  - [x] Add proper logging and error reporting
+  - [x] Include timeout and retry mechanisms
+
+Note: Health check configuration is complete in docker-compose.yml with comprehensive stages including environment validation, connectivity check, and authentication verification.
+
+### Phase 2: Script Stability Improvements
+
+- [x] Remove Docker command dependencies:
+  - [x] Replace docker-compose commands with direct PostgreSQL checks
+  - [x] Remove container state management code
+  - [x] Remove path resolution complexity
+  - [x] Test container-independent operation
+- [x] Improve error handling:
+  - [x] Remove `set -e` for more controlled error handling
+  - [x] Implement proper error propagation (using trap and handle_error)
+  - [x] Add detailed error reporting (with line numbers and exit codes)
+  - [x] Create error recovery procedures (allowing functions to handle their own errors)
+- [x] Enhance timing and retries:
+  - [x] Implement dynamic timeouts based on environment (MAX_WAIT, INITIAL_WAIT)
+  - [x] Add exponential backoff for retries (doubling wait time up to MAX_WAIT)
+  - [x] Configure environment-specific timing defaults (DB*CHECK*\* variables)
+  - [x] Add timeout override capabilities (via environment variables)
+- [x] Simplify Prisma integration:
+  - [x] Minimize invasive Prisma operations (validate only)
+  - [x] Implement basic schema validation only (removed push and generate)
+  - [x] Remove unnecessary client generation
+  - [x] Add Prisma check bypass option (SKIP_PRISMA_CHECK)
+
+### Phase 3: Development Integration
+
+- [ ] Integration points implementation:
+  - [ ] Revise post-container creation hook for stability
+  - [ ] Update pre-application startup check
+  - [ ] Create development status monitoring
+- [ ] Testing and validation:
+  - [ ] Document test scenarios
+  - [ ] Create failure simulation tests
+  - [ ] Verify recovery procedures
+  - [ ] Measure performance impact
+  - [ ] Test across different environments (local, Codespaces, CI)
+
+Note: Moving integration to Phase 3 to ensure script stability before integration.
+
+### Phase 4: Documentation & Monitoring
+
+- [ ] Update documentation:
+  - [ ] Add detailed testing strategy
+  - [ ] Document rollback procedures
+  - [ ] Create debugging guide
+- [ ] Implement monitoring:
+  - [ ] Add status reporting
+  - [ ] Create health metrics collection
+  - [ ] Document monitoring procedures
+
+### Completed Items
 
 - [x] Migrate script from zsh to bash for compatibility
 - [x] Remove `.env` file handling in favor of injected secrets
 - [x] Check container state before operations (avoid forced recreation)
 - [x] Infrastructure setup:
-  - [x] Use devcontainer.json for path resolution (support flexible docker-compose.yml locations)
+  - [x] Use devcontainer.json for path resolution
   - [x] Use devcontainer's workspaceFolder for workspace integration
-- [ ] Implement staged health checks:
+- [x] Implement basic health checks:
   - [x] Fast-fail environment validation
   - [x] Basic connection verification
   - [x] Authentication verification
   - [x] Application integration testing
-- [ ] Container health monitoring:
-  - [ ] Test and verify standalone health check script
-  - [ ] Document test cases and expected behaviors
-  - [ ] Create troubleshooting guide
-- [ ] Future considerations (requires approval):
-  - [ ] Evaluate Docker HEALTHCHECK integration
-  - [ ] Assess devcontainer lifecycle integration options
 
 ## Current Config
 
@@ -255,17 +328,29 @@ Current configuration summary based on project documentation and configuration f
    - Script: `scripts/devcontainer_db_health_check.sh`
    - Validates environment setup and database connectivity
    - Uses environment variables for configuration
+   - Stability improvements completed:
+     - Removed all Docker command dependencies
+     - Simplified to direct PostgreSQL checks
+     - Implemented controlled error handling
+     - Added dynamic timeouts with backoff
+     - Simplified Prisma integration
    - Current focus:
-     - Ensure reliable standalone operation
-     - Comprehensive testing of health check script
-     - Document failure scenarios and recovery
+     - Testing across different environments
+     - Documenting error scenarios
+     - Validating timeout configurations
+     - Gathering feedback on error messages
    - Recently completed:
      - Migration from zsh to bash
+     - Docker dependency removal
+     - Error handling improvements
+     - Dynamic timing implementation
+     - Prisma simplification
    - Next steps:
-     - Test environment variable handling
-     - Verify path resolution logic
-     - Document test cases and results
-     - Create troubleshooting procedures
-   - Future considerations (pending review):
-     - Container integration options
-     - Potential devcontainer integration
+     - Proceed to Phase 3 (Development Integration)
+     - Document test scenarios
+     - Create failure simulation tests
+     - Measure performance impact
+   - Future considerations:
+     - Environment-specific optimizations
+     - Optional Prisma integration
+     - Monitoring integration
