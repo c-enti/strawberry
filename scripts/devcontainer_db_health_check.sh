@@ -15,6 +15,8 @@ DB_PORT="${DB_PORT:-5432}"  # Default PostgreSQL port
 DB_CHECK_MAX_ATTEMPTS="${DB_CHECK_MAX_ATTEMPTS:-5}"
 DB_CHECK_INITIAL_WAIT="${DB_CHECK_INITIAL_WAIT:-2}"
 DB_CHECK_MAX_WAIT="${DB_CHECK_MAX_WAIT:-30}"
+PRISMA_SCHEMA_PATH="${PRISMA_SCHEMA_PATH:-server/prisma/schema.prisma}"
+DATABASE_URL="${DATABASE_URL:-}"  # Optional, but required for Prisma check
 
 # Function to check environment variables
 check_environment() {
@@ -76,11 +78,73 @@ verify_auth() {
     fi
 }
 
-# Main execution
+# Layer 2: Prisma Integration
+check_database_url_format() {
+    # Basic regex for postgresql://user:pass@host:port/db
+    if [[ -z "$DATABASE_URL" ]]; then
+        echo "Prisma: ERROR: DATABASE_URL not set"
+        return 2
+    fi
+    if [[ ! "$DATABASE_URL" =~ ^postgresql://[^:]+:[^@]+@[^:]+:[0-9]+/.+ ]]; then
+        echo "Prisma: ERROR: DATABASE_URL format invalid"
+        return 2
+    fi
+    return 0
+}
+
+check_prisma_schema_exists() {
+    if [[ ! -f "$PRISMA_SCHEMA_PATH" ]]; then
+        echo "Prisma: ERROR: Schema file not found at $PRISMA_SCHEMA_PATH (Prisma checks require this file. Is your project initialized?)"
+        return 2
+    fi
+    if [[ ! -r "$PRISMA_SCHEMA_PATH" ]]; then
+        echo "Prisma: ERROR: Schema file at $PRISMA_SCHEMA_PATH is not readable (Check file permissions.)"
+        return 2
+    fi
+    return 0
+}
+
+check_prisma_client() {
+    # Validate schema and client setup
+    if npx --yes prisma validate --schema="$PRISMA_SCHEMA_PATH" >/dev/null 2>&1; then
+        echo "Prisma: OK"
+        return 0
+    else
+        echo "Prisma: ERROR: Prisma validation failed"
+        return 1
+    fi
+}
+
 main() {
+    # Parse arguments
+    CHECK_MODE="service"
+    for arg in "$@"; do
+        case $arg in
+            --check=*)
+                CHECK_MODE="${arg#*=}"
+                ;;
+            --prisma)
+                CHECK_MODE="prisma"
+                ;;
+            --schema)
+                CHECK_MODE="schema"
+                ;;
+            --all)
+                CHECK_MODE="all"
+                ;;
+        esac
+    done
+
     check_environment || exit $?
     check_db_connection || exit 1
     verify_auth || exit 1
+
+    if [[ "$CHECK_MODE" == "prisma" || "$CHECK_MODE" == "all" ]]; then
+        check_database_url_format || exit $?
+        check_prisma_schema_exists || exit $?
+        check_prisma_client || exit $?
+    fi
+    # Layer 3 (schema) would go here for CHECK_MODE=schema or all
 }
 
-main
+main "$@"

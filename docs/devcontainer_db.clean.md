@@ -19,7 +19,7 @@ The script operates in layers, each building on successful completion of the pre
 # Output: DB: UP
 ```
 
-#### Layer 2: Prisma Setup [ ]
+#### Layer 2: Prisma Setup ✅
 
 _Only runs if Layer 1 returns UP_
 
@@ -31,6 +31,14 @@ _Only runs if Layer 1 returns UP_
 ./scripts/devcontainer_db_health_check.sh --check=prisma
 # Output: DB: UP
 #         Prisma: OK
+#
+# If the Prisma schema file is missing (default path: server/prisma/schema.prisma):
+# Output: DB: UP
+#         Prisma: ERROR: Schema file not found at server/prisma/schema.prisma (Prisma checks require this file. Is your project initialized?)
+#
+# If the Prisma schema file is not readable:
+# Output: DB: UP
+#         Prisma: ERROR: Schema file at server/prisma/schema.prisma is not readable (Check file permissions.)
 ```
 
 #### Layer 3: Application Schema [ ]
