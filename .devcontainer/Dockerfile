@@ -15,6 +15,8 @@ FROM mcr.microsoft.com/devcontainers/javascript-node:22-bullseye
 #     apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get -y install zsh; \
 #   fi
 
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+
 # 3. [Optional] You can add other setup commands here.
 # For example, installing global npm packages.
 #

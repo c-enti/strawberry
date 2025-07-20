@@ -1,6 +1,57 @@
 #!/bin/bash
 # devcontainer_db_health_check.sh
-# Health check for devcontainer PostgreSQL setup
+# Quick status script for DB health in devcontainer
+
+set -euo pipefail
+
+
+# --- Config ---
+REQUIRED_VARS=(POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB)
+DB_HOSTS=("${PGHOST:-localhost}" "db")
+DB_PORT="${PGPORT:-5432}"
+
+# --- Check environment variables ---
+missing_vars=()
+for var in "${REQUIRED_VARS[@]}"; do
+  if [[ -z "${!var:-}" ]]; then
+    missing_vars+=("$var")
+  fi
+done
+
+if (( ${#missing_vars[@]} > 0 )); then
+  for var in "${missing_vars[@]}"; do
+    echo "Missing: $var"
+  done
+  echo "DB: UNKNOWN (missing env vars)"
+  exit 2
+fi
+
+
+# --- Check DB reachability for multiple hosts ---
+if ! command -v pg_isready >/dev/null 2>&1; then
+  echo "pg_isready not found in PATH"
+  echo "DB: UNKNOWN (pg_isready missing)"
+  exit 2
+fi
+
+db_up=0
+for host in "${DB_HOSTS[@]}"; do
+  echo -n "Checking DB at $host:$DB_PORT/$POSTGRES_DB ... "
+  if pg_isready -h "$host" -p "$DB_PORT" -d "$POSTGRES_DB" -U "$POSTGRES_USER" > /dev/null 2>&1; then
+    echo "UP"
+    db_up=1
+  else
+    echo "DOWN"
+  fi
+done
+
+if [[ $db_up -eq 1 ]]; then
+  echo "DB: UP (at least one host reachable)"
+  exit 0
+else
+  echo "DB: DOWN (none of the tested hosts are reachable)"
+  exit 1
+fi
 
 # Initialize error handling without set -e for more control
 trap 'handle_error $? $LINENO' ERR

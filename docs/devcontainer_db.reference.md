@@ -1,52 +1,10 @@
+# DevContainer Database Health Check System (Reference Copy)
+
+This is a reference copy of the health check system documentation as of July 20, 2025. Use this for historical comparison and to track changes in process, intent, and implementation.
+
+---
+
 # DevContainer Database Health Check System
-
-## WHAT: Purpose and Requirements
-
-The db health check script provides a quick, direct, and actionable summary of the environment’s health. Its job is to check and report:
-
-- Which essential services (e.g., database) are running or not running, as expected
-- Whether required environment variables are present
-- Whether the database is reachable and accepting connections
-- (Optionally) Whether authentication and schema are valid
-
-**Output:**
-
-- Concise, human- and script-readable summary (e.g., `DB: UP`, `DB: DOWN`, `Missing: POSTGRES_USER`)
-- Exit code: 0 if all is well, 1 if something is wrong, 2 if misconfigured
-
-This script is not a test harness or meta-checker. It is a direct status tool, meant to be called by other scripts or humans for a quick environment health snapshot.
-
-## Timeframe & Next Steps
-
-**Estimated Time to Completion:**
-
-- Script implementation: 1–2 hours
-- Manual validation: 30–60 minutes
-- (Optional) Minimal test script: 30 minutes
-- Documentation update: 15–30 minutes
-
-**Immediate Next Steps:**
-
-1. Finalize the db health check script to check env vars, DB reachability, and output concise status.
-2. Manually validate the script in real scenarios.
-3. (Optional) Add a minimal test script for regression.
-4. Update documentation as needed.
-
-The clock starts now.
-
-## Intent and Implementation Process
-
-**Intent:**
-The health check script is designed as a support tool for development, not as the main product. Its purpose is to provide clear, actionable checks on the database environment—ensuring that essential prerequisites (environment variables, connectivity, authentication, and optionally schema) are met before or during development. The script should remain lightweight, fast, and easy to maintain, with output that helps developers quickly diagnose and resolve issues so they can focus on building the application.
-
-**Implementation Process:**
-
-1. **Discussion:** Identify needs, pain points, and desired outcomes for the health check system.
-2. **Documentation:** Clearly document the intended checks, process stages, and integration points before implementation.
-3. **Actionables:** Break down the work into actionable checklist items, prioritizing what is essential for developer support.
-4. **Implementation:** Only after discussion and documentation, implement the script and any integration, keeping the focus on supporting the application development process.
-
-> **Note:** Advanced integration (e.g., devcontainer hooks) or changes to devcontainer.json should only be made after all test scenarios for the health check script are implemented and passing, to avoid disrupting development workflows.
 
 This document describes the database health check system implemented in `scripts/devcontainer_db_health_check.sh`. For a complete summary of the current configuration and implementation status, see the [Current Config](#current-config) section at the end of this document.
 
