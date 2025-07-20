@@ -10,19 +10,19 @@
 
 1. Basic Resource Verification:
 
-   - [ ] Environment variable validation
-   - [ ] PostgreSQL service reachability
-   - [ ] Basic authentication check
+   - [x] Environment variable validation
+   - [x] PostgreSQL service reachability
+   - [x] Basic authentication check
 
 2. Essential Status Output:
 
-   - [ ] Clear UP/DOWN indicators
-   - [ ] Basic error reporting
-   - [ ] Standard exit codes (0,1,2)
+   - [x] Clear UP/DOWN indicators
+   - [x] Basic error reporting
+   - [x] Standard exit codes (0,1,2)
 
 3. Minimal Documentation:
-   - [ ] Basic usage instructions
-   - [ ] Error interpretation guide
+   - [x] Basic usage instructions
+   - [x] Error interpretation guide
 
 ---
 
@@ -272,7 +272,67 @@ The script should be run from the repository root:
 ./scripts/devcontainer_db_health_check.sh
 ```
 
-This is typically executed during development container setup or when verifying database connectivity issues.
+### Basic Usage Instructions
+
+1. Ensure required environment variables are set:
+
+   - `POSTGRES_USER`: Database username
+   - `POSTGRES_PASSWORD`: Database password
+   - `POSTGRES_DB`: Target database name
+
+2. Optional configuration variables:
+   - `DB_HOST`: Database hostname (default: "db")
+   - `DB_PORT`: Database port (default: 5432)
+   - `DB_CHECK_MAX_ATTEMPTS`: Maximum connection attempts (default: 5)
+   - `DB_CHECK_INITIAL_WAIT`: Initial wait time in seconds (default: 2)
+   - `DB_CHECK_MAX_WAIT`: Maximum wait time in seconds (default: 30)
+
+### Error Interpretation Guide
+
+The script uses a consistent output format:
+
+- Success: `DB: UP`
+- Failure: `DB: DOWN` followed by specific error messages
+
+#### Exit Codes
+
+- `0`: Success - Database is ready and accepting connections
+- `1`: Failure - Database connection or authentication failed
+- `2`: Configuration Error - Missing or invalid environment variables
+
+#### Common Error Messages
+
+1. Configuration Errors (Exit Code 2):
+
+   - `Missing: POSTGRES_USER POSTGRES_PASSWORD`: Required environment variables not set
+   - `Invalid (contains spaces): POSTGRES_USER`: Environment variable contains invalid characters
+
+2. Connection Errors (Exit Code 1):
+
+   - `Error: Database unreachable after 5 attempts`: Database service is not responding
+   - `Connection attempt X failed, waiting Ys...`: Temporary connection issue, retrying
+
+3. Authentication Errors (Exit Code 1):
+   - `Error: Authentication failed`: Invalid credentials or database does not exist
+
+### Troubleshooting Steps
+
+1. For Configuration Errors:
+
+   - Verify all required environment variables are set
+   - Check for typos or spaces in variable values
+   - Ensure variables are properly exported
+
+2. For Connection Errors:
+
+   - Verify database service is running
+   - Check network connectivity
+   - Confirm correct host and port settings
+
+3. For Authentication Errors:
+   - Verify credentials are correct
+   - Ensure database exists
+   - Check database user permissions
 
 ## Actionables
 
