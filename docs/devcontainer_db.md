@@ -1,5 +1,40 @@
 # DevContainer Database Health Check System
 
+> **CURRENT FOCUS:** Basic resource verification utility to confirm database availability for application use.
+> **STATUS:** Initial implementation phase
+> **NEXT STEPS:** Complete core functionality for resource checks
+
+## IMMEDIATE TO-DOS
+
+### Must Complete Now
+
+1. Basic Resource Verification:
+
+   - [ ] Environment variable validation
+   - [ ] PostgreSQL service reachability
+   - [ ] Basic authentication check
+
+2. Essential Status Output:
+
+   - [ ] Clear UP/DOWN indicators
+   - [ ] Basic error reporting
+   - [ ] Standard exit codes (0,1,2)
+
+3. Minimal Documentation:
+   - [ ] Basic usage instructions
+   - [ ] Error interpretation guide
+
+---
+
+## Background: Purpose and Requirements
+
+The db health check script is a standalone utility tool that verifies whether all database-related system resources required by the application are available and properly configured. Its job is to check and report:
+
+- Whether the PostgreSQL database service (a required application resource) is running and reachable
+- Whether all required environment variables for database operation are present and valid
+- Whether the application will be able to establish database connectivity
+- Whether database authentication is configured correctly for application useiner Database Health Check System
+
 ## WHAT: Purpose and Requirements
 
 The db health check script provides a quick, direct, and actionable summary of the environment’s health. Its job is to check and report:
@@ -16,16 +51,15 @@ The db health check script provides a quick, direct, and actionable summary of t
 
 This script is not a test harness or meta-checker. It is a direct status tool, meant to be called by other scripts or humans for a quick environment health snapshot.
 
-## Timeframe & Next Steps
+## Implementation Timeline
 
-**Estimated Time to Completion:**
+**Remaining Work:**
 
-- Script implementation: 1–2 hours
-- Manual validation: 30–60 minutes
-- (Optional) Minimal test script: 30 minutes
-- Documentation update: 15–30 minutes
+- Core functionality: ~2 hours
+- Basic validation: ~30 minutes
+- Essential docs: ~30 minutes
 
-**Immediate Next Steps:**
+**Critical Path:**
 
 1. Finalize the db health check script to check env vars, DB reachability, and output concise status.
 2. Manually validate the script in real scenarios.
@@ -37,7 +71,7 @@ The clock starts now.
 ## Intent and Implementation Process
 
 **Intent:**
-The health check script is designed as a support tool for development, not as the main product. Its purpose is to provide clear, actionable checks on the database environment—ensuring that essential prerequisites (environment variables, connectivity, authentication, and optionally schema) are met before or during development. The script should remain lightweight, fast, and easy to maintain, with output that helps developers quickly diagnose and resolve issues so they can focus on building the application.
+The health check script is designed as a resource validation tool that confirms whether all database-related prerequisites needed by the application are available and properly configured. It ensures that when the application needs to run, all required database resources (environment setup, connectivity, authentication) are ready for use. The script must remain lightweight, fast, and easy to maintain, providing clear status information that can be used by both human operators and automated systems to quickly verify resource availability.
 
 **Implementation Process:**
 
@@ -123,42 +157,34 @@ ACTIONABLE ITEMS (Pending Approval):
 ### 1. Environment Validation
 
 - Checks for required environment variables
-- Constructs the PostgreSQL connection URL
+- Validates variable format and content
 - Exits with code 2 if any required variables are missing
 - Shows masked password status for security
 
 ### 2. Database Connection Check
 
-- Direct PostgreSQL connectivity check
+- Direct PostgreSQL connectivity check using pg_isready
 - Dynamic retry system with exponential backoff
 - Configurable via environment variables:
   - DB_CHECK_MAX_ATTEMPTS (default: 5)
   - DB_CHECK_INITIAL_WAIT (default: 2s)
   - DB_CHECK_MAX_WAIT (default: 30s)
-- Uses `pg_isready` for lightweight availability check
 
 ### 3. Authentication Verification
 
-- Tests full database authentication
-- Uses `psql` to verify credentials
+- Tests basic database authentication
+- Uses psql to verify credentials
 - Provides detailed error diagnosis:
   - Database existence check
   - Authentication verification
   - Connectivity confirmation
-- Implements same backoff strategy as connection check
-
-### 4. Optional Prisma Verification
-
-- Minimal schema validation only
-- Can be bypassed with SKIP_PRISMA_CHECK=true
-- No database push or client generation
-- Non-blocking for development workflow
+- Uses same backoff strategy as connection check
 
 ## Exit Codes
 
-- 0: Success - Database is ready and Prisma connection verified
-- 1: Failure - Database connection or Prisma verification failed
-- 2: Configuration Error - Missing environment variables
+- 0: Success - Database is ready and accepting connections
+- 1: Failure - Database connection or authentication failed
+- 2: Configuration Error - Missing or invalid environment variables
 
 ## Upgrades
 
@@ -250,9 +276,56 @@ This is typically executed during development container setup or when verifying 
 
 ## Actionables
 
-The following items represent our implementation plan for the health check system:
+### Essential Core Implementation (Required Now)
 
-### Phase 1: Docker Health Check Integration ✅
+#### 1. Basic Resource Verification
+
+- [ ] Environment Check:
+  - [ ] Validate required environment variables exist
+  - [ ] Check variable format validity
+  - [ ] Fast fail if configuration incomplete
+- [ ] Database Service Check:
+  - [ ] Verify PostgreSQL service reachable
+  - [ ] Basic connectivity test with pg_isready
+  - [ ] Simple authentication verification
+
+#### 2. Status Reporting
+
+- [ ] Output Format:
+  - [ ] Clear UP/DOWN status
+  - [ ] Missing resource indicators
+  - [ ] Basic error messages
+- [ ] Exit Codes:
+  - [ ] 0: All resources available
+  - [ ] 1: Resource access failure
+  - [ ] 2: Configuration error
+
+#### 3. Essential Documentation
+
+- [ ] Usage Guide:
+  - [ ] Basic run instructions
+  - [ ] Environment setup
+  - [ ] Status interpretation
+- [ ] Error Resolution:
+  - [ ] Common error messages
+  - [ ] Basic troubleshooting steps
+
+### Future Enhancements (Post-Application Development)
+
+- [ ] Core Functionality:
+  - [ ] Environment variable validation
+  - [ ] Basic connectivity check
+  - [ ] Authentication verification
+  - [ ] Clear status output format
+- [ ] Error Handling:
+  - [ ] Proper exit codes
+  - [ ] Informative error messages
+  - [ ] Timeout handling
+- [ ] Documentation:
+
+  - [ ] Usage instructions
+  - [ ] Environment variable requirements
+  - [ ] Common error solutions
 
 - [x] Update db service configuration in docker-compose.yml:
   - [x] Add HEALTHCHECK directive with specified parameters
@@ -288,15 +361,21 @@ Note: Health check configuration is complete in docker-compose.yml with comprehe
   - [x] Remove unnecessary client generation
   - [x] Add Prisma check bypass option (SKIP_PRISMA_CHECK)
 
-### Phase 3: Development Integration
+The following items are not required for initial implementation but may be valuable later:
 
-#### Testing & Validation Framework (Required before integration)
+#### Testing Enhancements
 
-- [ ] Create test suite infrastructure:
-  - [ ] Create test helper functions for environment simulation
-  - [ ] Add test cases for all exit codes and failure modes
-  - [ ] Implement environment variable manipulation helpers
-  - [ ] Add mocks for PostgreSQL and Prisma responses
+- Comprehensive test suite
+- Failure simulation framework
+- Integration test scenarios
+- Performance metrics
+
+#### Integration Features
+
+- DevContainer hooks integration
+- CI/CD pipeline integration
+- Automated recovery procedures
+- Monitoring system integration
 - [ ] Document test scenarios:
   - [ ] Missing or invalid environment variables
   - [ ] Network connectivity issues
@@ -309,49 +388,33 @@ Note: Health check configuration is complete in docker-compose.yml with comprehe
   - [ ] Invalid credential scenarios
   - [ ] Schema validation failures
 
-#### Integration Points (After test framework)
+#### Advanced Features
 
-- [ ] Create pre-integration validation:
-  - [ ] Verify all required tools available
-  - [ ] Check environment variable injection
-  - [ ] Validate permissions and access
-  - [ ] Test rollback capabilities
-- [ ] Implement integration points:
-  - [ ] Add safe post-container creation hook
-  - [ ] Create recoverable pre-application check
-  - [ ] Implement non-blocking status monitoring
-- [ ] Design recovery procedures:
-  - [ ] Define automatic recovery actions
-  - [ ] Create manual intervention guides
-  - [ ] Document rollback procedures
+- Automatic recovery actions
+- Performance optimization
+- Extended monitoring capabilities
+- Multi-environment support
 
-#### Performance & Reliability
+#### Documentation Expansion
 
-- [ ] Measure and optimize:
-  - [ ] Baseline performance metrics
-  - [ ] Timeout and retry optimizations
-  - [ ] Resource usage analysis
-- [ ] Environment-specific testing:
-  - [ ] Local development validation
-  - [ ] GitHub Codespaces testing
-  - [ ] CI environment verification
-- [ ] Monitoring implementation:
-  - [ ] Add performance tracking
-  - [ ] Create health status reporting
-  - [ ] Implement alert mechanisms
+- Comprehensive installation guide
+- Advanced configuration options
+- Integration tutorials
+- Best practices guide
 
 Note: No devcontainer.json modifications until all test scenarios pass.
 
-### Phase 4: Documentation & Monitoring
+### Phase 3: Documentation & Distribution
 
-- [ ] Update documentation:
-  - [ ] Add detailed testing strategy
-  - [ ] Document rollback procedures
-  - [ ] Create debugging guide
-- [ ] Implement monitoring:
-  - [ ] Add status reporting
-  - [ ] Create health metrics collection
-  - [ ] Document monitoring procedures
+- [ ] Documentation:
+  - [ ] Installation guide
+  - [ ] Configuration reference
+  - [ ] Troubleshooting guide
+  - [ ] Example usage scenarios
+- [ ] Distribution:
+  - [ ] Package script for standalone use
+  - [ ] Version control integration guide
+  - [ ] CI/CD pipeline examples
 
 ### Completed Items
 
@@ -367,9 +430,22 @@ Note: No devcontainer.json modifications until all test scenarios pass.
   - [x] Authentication verification
   - [x] Application integration testing
 
-## Current Config
+---
 
-Current configuration summary based on project documentation and configuration files:
+## Reference Information
+
+### Implementation Status
+
+- ✅ Basic script structure
+- ✅ Environment variable handling
+- ✅ Direct PostgreSQL checks
+- ✅ Error handling framework
+- 🏗️ Core functionality implementation
+- ⏳ Basic documentation
+
+### Current Config
+
+Current configuration summary (reference only):
 
 1. Project Structure:
 
