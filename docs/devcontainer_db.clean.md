@@ -41,19 +41,23 @@ _Only runs if Layer 1 returns UP_
 #         Prisma: ERROR: Schema file at server/prisma/schema.prisma is not readable (Check file permissions.)
 ```
 
-#### Layer 3: Application Schema [ ]
+#### Layer 3: Application Schema ✅
 
 _Only runs if Layer 2 succeeds_
 
-- Verify Calendar table
-- Verify Event table
-- Check required columns
+- Verify Calendar table exists
+- Verify Event table exists
 
 ```bash
 ./scripts/devcontainer_db_health_check.sh --check=schema
 # Output: DB: UP
 #         Prisma: OK
 #         Schema: VALID
+#
+# If a required table is missing:
+# Output: DB: UP
+#         Prisma: OK
+#         Schema: ERROR: Table 'Calendar' not found
 ```
 
 #### Usage Examples

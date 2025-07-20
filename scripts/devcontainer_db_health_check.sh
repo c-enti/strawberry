@@ -144,7 +144,17 @@ main() {
         check_prisma_schema_exists || exit $?
         check_prisma_client || exit $?
     fi
-    # Layer 3 (schema) would go here for CHECK_MODE=schema or all
+
+    if [[ "$CHECK_MODE" == "schema" || "$CHECK_MODE" == "all" ]]; then
+        # Layer 3: Minimal table existence checks
+        for table in "Calendar" "Event"; do
+            if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT to_regclass('$table');" | grep -qw "$table"; then
+                echo "Schema: ERROR: Table '$table' not found"
+                exit 1
+            fi
+        done
+        echo "Schema: VALID"
+    fi
 }
 
 main "$@"
