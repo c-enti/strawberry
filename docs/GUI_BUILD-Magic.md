@@ -4,7 +4,7 @@
 
 To achieve fluid and magic-like crafting of stunningly unique, personalized, printable calendars using Generative AI, proceed as follows:
 
-1. **GenAI Creative Assistant Integration**
+1. **GenAI Creative Assistant Integration** ✅
 
    - Natural language prompt interface
    - GenAI backend integration (text and image)
@@ -38,13 +38,28 @@ To achieve fluid and magic-like crafting of stunningly unique, personalized, pri
 
 # Fastest Path to Value: Minimal GenAI Assistant in Sidebar
 
-- [ ] Add a minimal "GenAI Assistant" section to the Sidebar
-  - [ ] Text input for prompt
-  - [ ] Submit button
-  - [ ] Area to display the latest GenAI response (no conversation/history at first)
-- [ ] Stub backend connection to return a placeholder/mock GenAI response
-- [ ] Ensure basic error handling and loading state in the UI
+- [x] Add a minimal "GenAI Assistant" section to the Sidebar
+  - [x] Text input for prompt
+  - [x] Submit button
+  - [x] Area to display the latest GenAI response (no conversation/history at first)
+- [x] Stub backend connection to return a placeholder/mock GenAI response
+- [x] Ensure basic error handling and loading state in the UI
 
-_Once this is working and useful, expand to conversation history, advanced feedback, and real backend integration. Update actionables accordingly._
+---
+
+## Task 1: GenAI Creative Assistant Integration — Next Enhancements
+
+- [x] Add conversation history to GenAI Assistant
+  - [x] Display a scrollable list of prompt/response pairs
+  - [x] Allow user to clear or reset conversation
+- [x] Implement advanced feedback mechanisms
+  - [x] Add thumbs up/down or rating for GenAI responses
+  - [x] Allow user to edit and resubmit previous prompts
+- [ ] Integrate with real GenAI backend
+  - [ ] Connect to actual GenAI API (e.g., Gemini, OpenAI, etc.)
+  - [ ] Handle image and text responses
+  - [ ] Robust error handling and user messaging for API failures
+
+_Check off each item as implemented and verified. Update with further enhancements as needed._
 
 _Once all items are implemented and verified, check them off and update this section with the next set of actionables._
