@@ -17,15 +17,24 @@ const GenAIAssistant: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await new Promise((res) => setTimeout(res, 800));
-      const mockResponse = `(Mock) GenAI says: "${prompt}"`;
+      const res = await fetch("/api/genai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, type: "text" }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "GenAI API error");
+      }
+      const data = await res.json();
+      const responseText = data.response || data.text || JSON.stringify(data);
       setConversation((prev) => [
         ...prev,
-        { prompt, response: mockResponse, feedback: null },
+        { prompt, response: responseText, feedback: null },
       ]);
       setPrompt("");
-    } catch {
-      setError("Failed to get response. Please try again.");
+    } catch (err: any) {
+      setError(err.message || "Failed to get response. Please try again.");
     } finally {
       setLoading(false);
     }

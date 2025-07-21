@@ -9,6 +9,7 @@ import usersRouter from "./routes/users";
 import calendarRouter from "./routes/calendar";
 import googleCalendarRouter from "./routes/googleCalendar";
 import projectManagementRouter from "./routes/projectManagement";
+import genaiRouter from "./routes/genai";
 
 const app: Express = express();
 
@@ -34,6 +35,7 @@ app.use("/users", usersRouter);
 app.use("/calendar", calendarRouter);
 app.use("/calendar/google", googleCalendarRouter);
 app.use("/projects", projectManagementRouter);
+app.use("/api/genai", genaiRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req: Request, res: Response, next: NextFunction) {
