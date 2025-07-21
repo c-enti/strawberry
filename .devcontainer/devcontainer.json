@@ -27,8 +27,13 @@
   "postCreateCommand": "cd shared && npm install && cd ../client && npm install && cd ../server && npm install && cd ..",
 
   // Run client and server development servers concurrently after attaching.
+  /**
   "postAttachCommand": {
     "client + server": "cd shared && npx concurrently 'cd ../client && npm run dev' 'cd ../server && npm run dev'"
+  },
+  **/
+  "postAttachCommand": {
+    "client + server + db": "cd shared && npx concurrently --kill-others-on-fail --name \"client,server,db\" --prefix-colors \"blue,green,magenta\" \"cd ../client && npm run dev\" \"cd ../server && npm run dev\" \"pg_isready -h $DB_HOST -p $DB_PORT || echo 'PostgreSQL not ready\\!'\""
   },
 
   // --- VS CODE CUSTOMIZATIONS ---
