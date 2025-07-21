@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { lazy, Suspense } from "react";
+const GenAIAssistant = lazy(() => import("./GenAIAssistant"));
 import { CustomizationTemplate } from "./CustomizationSelectors";
 import styles from "./Sidebar.module.css";
 import {
@@ -68,6 +69,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className={styles.section}>
           <h3>Settings</h3>
           <div className={styles.comingSoon}>Coming soon</div>
+        </div>
+        <div className={styles.section}>
+          {/* GenAI Assistant Section */}
+          <Suspense fallback={<div>Loading GenAI Assistant...</div>}>
+            <GenAIAssistant />
+          </Suspense>
         </div>
       </nav>
     </aside>
