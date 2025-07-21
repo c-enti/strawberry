@@ -146,10 +146,18 @@ main() {
     fi
 
     if [[ "$CHECK_MODE" == "schema" || "$CHECK_MODE" == "all" ]]; then
-        # Layer 3: Minimal table existence checks
+        # Layer 3: Schema validation
+        VERBOSE=${VERBOSE:-false}
         for table in "Calendar" "Event"; do
-            if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT to_regclass('$table');" | grep -qw "$table"; then
-                echo "Schema: ERROR: Table '$table' not found"
+            if ! PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc \
+                "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = '$table');" | grep -q t; then
+                if [[ "$VERBOSE" == "true" ]]; then
+                    echo "Schema: ERROR: Table '$table' not found in schema 'public'"
+                    echo "Available tables:"
+                    PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "\dt"
+                else
+                    echo "Schema: ERROR: Table '$table' not found"
+                fi
                 exit 1
             fi
         done
