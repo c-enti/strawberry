@@ -22,6 +22,15 @@ RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/ap
 #
 # RUN su node -c "npm install -g pnpm"
 
+# Install jq
+RUN apt-get update && apt-get install -y jq
+
+# Copy the script
+COPY load-secrets.sh /etc/profile.d/load-secrets.sh
+
+# Make sure it's executable
+RUN chmod +x /etc/profile.d/load-secrets.sh
+
 # This Dockerfile is intentionally simple because the base image is very capable.
 # You only need to add lines here if you want to customize the container's
 # operating system or install global tools beyond what the base image provides.

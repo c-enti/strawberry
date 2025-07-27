@@ -16,10 +16,20 @@ services:
     # Mount your project code into the container
     volumes:
       - ..:/workspaces:cached
+      - ./secrets.json:/workspaces/secrets.json:ro
+
+    # Fetch secrets to variables, made possible by script
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY}"
+      GEMINI_API_URL: "${GEMINI_API_URL}"
 
     # Depend on the 'db' service. This ensures 'db' starts before 'app'
-    depends_on:
-      - db
+    #depends_on:
+    #  - db
 
   # 2. This is your PostgreSQL database service
   db:

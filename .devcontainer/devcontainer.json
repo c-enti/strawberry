@@ -13,13 +13,6 @@
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
   // --- LIFECYCLE HOOKS ---
-  // Automates the creation of the .env file -- a necessary step before an application can be run, as it might contain crucial configuration information -- ensuring the file is present in the environment without needing to create it manually.
-  /**
-  "initializeCommand": {
-    "env-setup": "touch .env"
-  },
-  **/
-
   // Wait for the postCreateCommand to complete before allowing connection.
   "waitFor": "onCreateCommand",
 
@@ -30,7 +23,8 @@
   /**
   "postAttachCommand": {
     "client + server": "cd shared && npx concurrently 'cd ../client && npm run dev' 'cd ../server && npm run dev'"
-  },
+      "client + server + db": "cd shared && npx concurrently --kill-others-on-fail --name \"client,server,db\" --prefix-colors \"blue,green,magenta\" \"cd ../client && npm run dev\" \"cd ../server && npm run dev\" \"pg_isready -h $DB_HOST -p $DB_PORT || echo 'PostgreSQL not ready\\!'\""
+},
   **/
   "postAttachCommand": {
     "client + server + db": "cd shared && npx concurrently --kill-others-on-fail --name \"client,server,db\" --prefix-colors \"blue,green,magenta\" \"cd ../client && npm run dev\" \"cd ../server && npm run dev\" \"pg_isready -h $DB_HOST -p $DB_PORT || echo 'PostgreSQL not ready\\!'\""
@@ -94,11 +88,13 @@
   },
 
   // --- GENERAL SETTINGS ---
+  /**
   "remoteEnv": {
     "DATABASE_URL": "postgresql://${localEnv:POSTGRES_USER}:${localEnv:POSTGRES_PASSWORD}@db:5432/${localEnv:POSTGRES_DB}",
     "GEMINI_API_KEY": "${localEnv:GEMINI_API_KEY}",
     "GEMINI_API_URL": "${localEnv:GEMINI_API_URL}"
   },
+  **/
   "remoteUser": "node",
   "hostRequirements": {
     "cpus": 4
