@@ -1,0 +1,43 @@
+.bottomBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background-color: var(--background-secondary);
+  border-top: 1px solid var(--border-color);
+  height: 40px;
+  width: 100%;
+}
+
+.tips {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.status {
+  flex: 1;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.actions {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.actions button {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--background-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  background: var(--background-hover);
+}

@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Calendar {
+  id            String   @id @default(uuid())
+  name          String   // Project name
+  description   String?  // Optional project description
+  year          Int
+  selectedMonths String[]
+  events        Event[]
+  backgroundUrl String?
+  settings      Json?    // Theme, design, and other project settings
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Event {
+  id         String   @id @default(uuid())
+  date       String
+  title      String
+  calendar   Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  calendarId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

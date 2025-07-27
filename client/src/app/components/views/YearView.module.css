@@ -1,0 +1,124 @@
+.yearView {
+  padding: 1rem;
+  background: var(--calendar-bg);
+  color: var(--calendar-text);
+}
+
+.yearGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+.month {
+  background: var(--calendar-surface);
+  border: 1px solid var(--calendar-border);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.monthTitle {
+  margin: 0 0 0.5rem;
+  color: var(--calendar-primary);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 0.25rem;
+}
+
+.weekday {
+  font-size: 0.7rem;
+  text-align: center;
+  color: var(--calendar-accent);
+  font-weight: 500;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.day {
+  aspect-ratio: 1;
+  padding: 2px;
+  font-size: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  border-radius: 4px;
+}
+
+.day:hover {
+  background: var(--calendar-accent);
+  color: white;
+}
+
+.day.selected {
+  background-color: var(--calendar-accent);
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 0 0 2px var(--calendar-primary);
+  z-index: 1;
+  position: relative;
+}
+
+.day.selected:hover {
+  background-color: var(--calendar-primary);
+}
+
+.dayNumber {
+  font-weight: 500;
+}
+
+.today {
+  background: var(--calendar-primary);
+  color: white;
+}
+
+.selected {
+  background: var(--calendar-accent) !important;
+  color: white !important;
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.selected:hover {
+  transform: scale(1.1);
+}
+
+.otherMonth {
+  opacity: 0.3;
+}
+
+.indicators {
+  display: flex;
+  gap: 2px;
+  margin-top: 1px;
+}
+
+.eventIndicator {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--calendar-accent);
+}
+
+.holidayIndicator {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--calendar-primary);
+}
+
+.hasEvents .dayNumber,
+.hasHolidays .dayNumber {
+  font-weight: bold;
+}
