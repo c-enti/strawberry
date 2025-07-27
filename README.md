@@ -1,6 +1,8 @@
-# CHRONOS (CHR 0725-0907v)
+# CHRONOS, CHR_v/0725-0907
 
 Home to **ChronosCraft AI**
+
+## ChronosCraft AI
 
 Fluid and magic-like crafting of stunningly unique, personalized, printable calendars using Generative AI.
 
@@ -31,6 +33,19 @@ ChronosCraft AI is a web application where users co-create beautiful, personaliz
 - [`server/`](./server): Backend (Node.js/Express) – API orchestration, persistence, and integration with AI services.
 
 For detailed technical and product documentation, see the respective `README.md` files in each subdirectory.
+
+## Quick Start
+
+1. Set up your development environment (see `docs/CONFIGURATION.md`)
+2. Install dependencies for both client and server
+3. Start the development servers
+
+## Documentation
+
+- 📚 `docs/CONFIGURATION.md` - Setup and configuration guide
+- 🔧 `docs/API.md` - API documentation and endpoints
+- 👥 `docs/CONTRIBUTING.md` - Development workflow and guidelines
+- 📝 `docs/CHANGELOG.md` - Version history and changes
 
 ## Project Structure
 
@@ -69,6 +84,10 @@ For detailed configuration and setup instructions, see `docs/CONFIGURATION.md`.
 - **PDF Generation:** Use a proven, robust library (implementing both, but for v0.1 the focus is on pdf-lib; puppeteer for HTML-to-PDF is to be an addition for V1.0 -- make it work).
 - **Persistence:** Standard database for user accounts, projects, preferences, asset metadata.
 
+> **Babel Notice (May 2025):**
+>
+> The custom Babel configuration (`client/babel.config.js`) was removed to restore compatibility with Next.js 15+ and SWC-based features. No custom Babel plugins or transforms were in use. See `client/BABEL_REMOVAL.md` for details.
+
 ## Secrets & Sensitive Data
 
 - All sensitive configuration (API keys, credentials, etc.) must be managed using [GitHub Secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets) only. **Do not commit secrets to the repository or use alternative secret management systems.**
@@ -80,18 +99,7 @@ For detailed configuration and setup instructions, see `docs/CONFIGURATION.md`.
 - Do not commit secrets or sensitive values to the repository.
 - See `CONTRIBUTING.md` for more details on environment variable management.
 
-## Documentation
-
-- 👥 `docs/CONTRIBUTING.md` - Development workflow and guidelines
-- 📝 `docs/CHANGELOG.md` - Version history and changes
-
-## Quick Start
-
-> **Babel Notice (May 2025):**
->
-> The custom Babel configuration (`client/babel.config.js`) was removed to restore compatibility with Next.js 15+ and SWC-based features. No custom Babel plugins or transforms were in use. See `client/BABEL_REMOVAL.md` for details.
-
-### Integration Testing with start-dev.sh
+## Integration Testing with start-dev.sh
 
 To run full integration (end-to-end) tests across both backend and frontend, use the `start-dev.sh` script in the project root. This script:
 
