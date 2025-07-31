@@ -1,0 +1,89 @@
+{
+  "name": "ChronosCraft Dev Env V1.0",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/chronos",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true
+    },
+    
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "postCreateCommand": "sudo chown -R node:node /chronos && cd server && npm install && cd ../client && npm install && npx playwright install --with-deps",
+
+  "remoteEnv": {
+    "DATABASE_URL": "postgresql://${localEnv:POSTGRES_USER}:${localEnv:POSTGRES_PASSWORD}@db:5432/${localEnv:POSTGRES_DB}",
+    "GEMINI_API_KEY": "${localEnv:GEMINI_API_KEY}",
+    "TEST_DATABASE_URL": "postgresql://${localEnv:POSTGRES_USER}:${localEnv:POSTGRES_PASSWORD}@db:5432/test_${localEnv:POSTGRES_DB}",
+    "CI": "false",
+    "TEST_ENV": "development"
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[javascript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "workbench.iconTheme": "vscode-icons",
+        "github.copilot.enable": {
+           "*": true,
+           "plaintext": false,
+           "markdown": true,
+           "scminput": false
+        }
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "prisma.prisma",
+        "humao.rest-client",
+        "github.copilot",
+        "github.copilot-chat",
+        "github.vscode-github-actions",
+        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-containers",
+        "ms-azuretools.vscode-postgresql",
+        "ms-playwright.playwright",
+        "ms-vscode.test-adapter-converter",
+        "ms-vscode.vscode-node-azure-pack",
+        "ms-vscode.vscode-typescript-next",
+        "vscode-icons-team.vscode-icons",
+        "cweijan.vscode-postgresql-client2",
+        "bradlc.vscode-tailwindcss",
+        "formulahendry.auto-rename-tag",
+        "dsznajder.es7-react-js-snippets"
+      ]
+    }
+  },
+
+  "forwardPorts": [3000, 5000, 5432],
+  "portsAttributes": {
+    "3000": {
+      "label": "frontend",
+      "onAutoForward": "openPreview"
+    },
+    "5000": {
+      "label": "backend"
+    },
+    "5432": {
+      "label": "database"
+    }
+  },
+
+  "remoteUser": "node"
+
+}

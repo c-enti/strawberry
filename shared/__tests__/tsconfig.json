@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "baseUrl": "..",
+    "paths": {
+      "@utils/*": ["utils/*"],
+      "@shared/*": ["*"]
+    }
+  },
+  "include": ["../**/*"],
+  "exclude": ["../node_modules", "../dist"]
+}

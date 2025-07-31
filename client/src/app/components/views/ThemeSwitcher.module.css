@@ -1,0 +1,65 @@
+.themeSwitcher {
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--calendar-surface);
+  margin-bottom: 1rem;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--calendar-primary);
+}
+
+.themeButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.themeButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--calendar-border);
+  border-radius: 4px;
+  background: var(--calendar-surface);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.themeButton:hover {
+  border-color: var(--calendar-accent);
+}
+
+.themeButton.active {
+  border-color: var(--calendar-primary);
+  background: var(--calendar-primary);
+  color: white;
+}
+
+.colorPreview {
+  display: flex;
+  gap: 2px;
+}
+
+.primary,
+.accent {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.primary {
+  background: var(--theme-primary);
+}
+
+.accent {
+  background: var(--theme-accent);
+}
+
+.themeName {
+  font-size: 0.9rem;
+}

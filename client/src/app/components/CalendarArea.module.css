@@ -1,0 +1,14 @@
+.calendar-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 1rem;
+  min-height: 0; /* Important for flex overflow to work */
+  height: 100%;
+  background: var(--background-primary);
+}
+
+.calendar-content {
+  min-width: min-content; /* Ensures content doesn't shrink below its minimum size */
+  height: fit-content;
+}

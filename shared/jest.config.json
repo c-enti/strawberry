@@ -1,0 +1,19 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "moduleFileExtensions": ["ts", "tsx", "js", "jsx", "json", "node"],
+  "transform": {
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      {
+        "tsconfig": "__tests__/tsconfig.json"
+      }
+    ]
+  },
+  "testMatch": ["**/__tests__/**/*.test.ts?(x)"],
+  "moduleNameMapper": {
+    "^@utils/(.*)$": "<rootDir>/utils/$1",
+    "^@shared/(.*)$": "<rootDir>/$1"
+  },
+  "modulePaths": ["<rootDir>"]
+}
