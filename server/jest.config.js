@@ -7,6 +7,7 @@ module.exports = {
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],
   coveragePathIgnorePatterns: ["/node_modules/", "/__tests__/"],
+  setupFilesAfterEnv: ["./setupTests.ts"],
   moduleNameMapper: {
     "^@shared/(.*)$": "<rootDir>/../shared/$1",
   },

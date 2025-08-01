@@ -48,19 +48,24 @@ describe("Project Management API", () => {
       const testCases = [
         {
           data: { year: 2025, selectedMonths: ["January"] },
-          missing: "name",
+          expectedErrors: [{ path: "name" }],
         },
         {
           data: { name: "Test Calendar", selectedMonths: ["January"] },
-          missing: "year",
+          expectedErrors: [{ path: "year" }],
         },
         {
           data: { name: "Test Calendar", year: 2025 },
-          missing: "selectedMonths",
+          expectedErrors: [{ path: "selectedMonths" }],
         },
         {
           data: {},
-          missing: "all required fields",
+          expectedErrors: [
+            { path: "name" },
+            { path: "name", value: "" },
+            { path: "year" },
+            { path: "selectedMonths" },
+          ],
         },
       ];
 
@@ -70,10 +75,20 @@ describe("Project Management API", () => {
           .send(testCase.data)
           .expect(400);
 
-        expect(response.body).toHaveProperty(
-          "error",
-          "Missing required fields"
-        );
+        // Check that response has errors array
+        expect(response.body).toHaveProperty("errors");
+        expect(Array.isArray(response.body.errors)).toBe(true);
+
+        // Verify each expected error path is present in the response
+        for (const expectedError of testCase.expectedErrors) {
+          expect(response.body.errors).toContainEqual(
+            expect.objectContaining({
+              location: "body",
+              type: "field",
+              ...expectedError,
+            })
+          );
+        }
 
         // Verify no project was created
         const count = await prisma.calendar.count();
