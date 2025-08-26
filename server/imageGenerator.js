@@ -28,9 +28,45 @@ function escapeXml(s = "") {
 }
 
 async function generateWithGemini(payload = {}) {
-  // Offline stub: return a deterministic prompt. If USE_REAL_AI, caller must
-  // replace this with a real implementation that calls Gemini.
   const text = payload.text || payload.poem || "";
+
+  // If configured to use real AI, call Gemini-like API (best-effort, non-fatal)
+  if (USE_REAL_AI && process.env.GEMINI_API_URL && process.env.GEMINI_API_KEY) {
+    const url = process.env.GEMINI_API_URL;
+    const headers = { "Content-Type": "application/json" };
+    // attach key either as header or query depending on provider
+    if (/^AIza[0-9A-Za-z-_]+$/.test(String(process.env.GEMINI_API_KEY))) {
+      headers["X-goog-api-key"] = String(process.env.GEMINI_API_KEY);
+    } else if (/^ya29\./.test(String(process.env.GEMINI_API_KEY))) {
+      headers.Authorization = `Bearer ${String(process.env.GEMINI_API_KEY)}`;
+    }
+
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text }] }],
+    });
+
+    try {
+      const resp = await fetchWithTimeout(url, {
+        method: "POST",
+        headers,
+        body,
+      });
+      const j = await resp.json();
+      // Safe extraction similar to reference script
+      const promptText =
+        j?.candidates?.[0]?.content?.parts?.[0]?.text ||
+        j?.outputs?.[0]?.text ||
+        null;
+      if (promptText) return { prompt: promptText };
+    } catch (e) {
+      console.warn(
+        "generateWithGemini: real API call failed:",
+        e && e.message ? e.message : e
+      );
+    }
+  }
+
+  // Offline stub fallback
   const prompt = `A soft-focus painterly background that complements: ${
     text.split("\n")[0] || text
   }`;
@@ -56,6 +92,23 @@ async function generateBackgroundForPoem(visualPrompt, opts = {}) {
 
   safeWriteFileAtomic(dest, buf);
   return { imagePath: dest, size: buf.length };
+}
+
+// Rasterize SVG to PNG when `sharp` is available. Returns path and size.
+async function rasterizeIfNeeded(imagePath, opts = {}) {
+  try {
+    const sharp = await import("sharp");
+    const outPath = imagePath.replace(/\.svg$/i, ".png");
+    const data = await fs.promises.readFile(imagePath);
+    await sharp.default(data).png().toFile(outPath);
+    return { imagePath: outPath, size: (await fs.promises.stat(outPath)).size };
+  } catch (e) {
+    // sharp not available or failed: return original
+    return {
+      imagePath,
+      size: fs.existsSync(imagePath) ? fs.statSync(imagePath).size : 0,
+    };
+  }
 }
 
 async function generatePoemAndImage(poemText, opts = {}) {
@@ -111,6 +164,39 @@ async function generatePoemAndImage(poemText, opts = {}) {
     poemPromptPath,
     imagePromptPath,
   };
+}
+
+// Robust fetch helper with timeout and simple retries
+async function fetchWithTimeout(url, init = {}, opts = {}) {
+  const timeoutMs = opts.timeoutMs || 7000;
+  const retries = opts.retries || 1;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    let controller;
+    if (typeof AbortController !== "undefined") {
+      controller = new AbortController();
+      init.signal = controller.signal;
+    }
+    const timer = setTimeout(() => controller && controller.abort(), timeoutMs);
+    try {
+      let fetchImpl = globalThis.fetch;
+      if (!fetchImpl) {
+        try {
+          fetchImpl = (await import("undici")).fetch;
+        } catch (e) {
+          fetchImpl = (await import("node-fetch")).default;
+        }
+      }
+      const res = await fetchImpl(url, init);
+      clearTimeout(timer);
+      return res;
+    } catch (e) {
+      clearTimeout(timer);
+      if (attempt === retries) throw e;
+      // small backoff
+      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+    }
+  }
 }
 
 // Verifier: attempts vision API if configured, otherwise falls back to heuristic
