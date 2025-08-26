@@ -2,25 +2,6 @@
 
 import fetch from "node-fetch";
 import fs from "fs";
-// Dynamically import verifier to support both ESM and CJS consumers
-let verifyImageMatchesText = null;
-(async () => {
-  try {
-    const mod = await import("../imageGenerator.js");
-    verifyImageMatchesText =
-      mod.verifyImageMatchesText ||
-      mod.default?.verifyImageMatchesText ||
-      mod.verifyImageMatchesText;
-  } catch (e) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const mod = require("../imageGenerator.js");
-      verifyImageMatchesText = mod.verifyImageMatchesText;
-    } catch (e2) {
-      verifyImageMatchesText = null;
-    }
-  }
-})();
 
 // --- Type definitions for API responses ---
 /** @typedef {Object} GeminiError {
@@ -52,6 +33,39 @@ const CLOUDFLARE_ACCOUNT_ID =
 const CLOUDFLARE_API_TOKEN =
   process.env.CLOUDFLARE_API_TOKEN || "YOUR_CLOUDFLARE_API_TOKEN";
 // --------------------------------------------------------------------------
+
+// Soft environment validation (non-blocking) — warns when placeholders or missing values are detected.
+function validateEnvSoft() {
+  const placeholders = [];
+  if (!GEMINI_API_URL || GEMINI_API_URL.includes("YOUR_GEMINI_API_URL"))
+    placeholders.push("GEMINI_API_URL");
+  if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR_GEMINI_API_KEY"))
+    placeholders.push("GEMINI_API_KEY");
+  if (
+    !CLOUDFLARE_ACCOUNT_ID ||
+    CLOUDFLARE_ACCOUNT_ID.includes("YOUR_CLOUDFLARE_ACCOUNT_ID")
+  )
+    placeholders.push("CLOUDFLARE_ACCOUNT_ID");
+  if (
+    !CLOUDFLARE_API_TOKEN ||
+    CLOUDFLARE_API_TOKEN.includes("YOUR_CLOUDFLARE_API_TOKEN")
+  )
+    placeholders.push("CLOUDFLARE_API_TOKEN");
+
+  if (placeholders.length > 0) {
+    console.warn(
+      "\n[env] The following environment variables appear missing or are still placeholders: " +
+        placeholders.join(", ")
+    );
+    console.warn(
+      "[env] This script can run in local fallback modes, but for full connectivity provide real credentials."
+    );
+    console.warn("[env] Example: export GEMINI_API_KEY=your_token_here");
+    console.warn(
+      "[env] If you intentionally want to run without cloud services, ignore this warning.\n"
+    );
+  }
+}
 
 /**
  * A generic function to call the Gemini API.
@@ -185,16 +199,6 @@ async function main() {
   fs.writeFileSync(poemOutputPath, poem);
   fs.writeFileSync(poemPromptPath, poemGenerationPrompt);
   fs.writeFileSync(imagePromptPath, visualPrompt);
-
-  // Run image verification and write results
-  try {
-    const verification = await verifyImageMatchesText(imageOutputPath, poem);
-    const verificationPath = `${outputDir}/verification_${timestamp}.json`;
-    fs.writeFileSync(verificationPath, JSON.stringify(verification, null, 2));
-    console.log(`\n🔎 Verification written: ${verificationPath}`);
-  } catch (e) {
-    console.warn("Image verification failed:", e && e.message ? e.message : e);
-  }
 
   console.log(`\n✅ Success! Files saved:
   - Image: ${imageOutputPath}
