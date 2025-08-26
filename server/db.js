@@ -79,6 +79,18 @@ async function initializeDb() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (ai_result_id) REFERENCES ai_results(id)
       )`,
+      `CREATE TABLE IF NOT EXISTS jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        payload TEXT,
+        state TEXT NOT NULL DEFAULT 'queued',
+        progress INTEGER NOT NULL DEFAULT 0,
+        file_path TEXT,
+        error TEXT,
+        locked_by TEXT,
+        locked_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`,
     ];
 
     await new Promise((resolve, reject) => {

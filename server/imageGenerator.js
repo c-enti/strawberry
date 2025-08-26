@@ -86,8 +86,11 @@ async function generateBackgroundForPoem(visualPrompt, opts = {}) {
 
   let dest = opts.destPath;
   if (!dest) {
+    const defaultOutDir = path.resolve(__dirname, "samples", "images");
+    if (!fs.existsSync(defaultOutDir))
+      fs.mkdirSync(defaultOutDir, { recursive: true });
     const name = `image-${Date.now()}.svg`;
-    dest = path.join(os.tmpdir(), name);
+    dest = path.join(defaultOutDir, name);
   }
 
   safeWriteFileAtomic(dest, buf);
@@ -125,14 +128,12 @@ async function generatePoemAndImage(poemText, opts = {}) {
   }
 
   const bg = await generateBackgroundForPoem(visualPrompt, opts);
+  // attempt rasterization (sharp) to produce PNG when available
+  const raster = await rasterizeIfNeeded(bg.imagePath, opts);
 
-  // Save poem and prompts alongside default outDir if not using opts.destPath
-  const defaultOutDir = path.resolve(
-    process.cwd(),
-    "server",
-    "samples",
-    "images"
-  );
+  // Save poem and prompts alongside default outDir if not using opts.destPath.
+  // Use __dirname so outputs are always written to server/samples/images regardless of CWD.
+  const defaultOutDir = path.resolve(__dirname, "samples", "images");
   if (!fs.existsSync(defaultOutDir))
     fs.mkdirSync(defaultOutDir, { recursive: true });
 
@@ -158,8 +159,8 @@ async function generatePoemAndImage(poemText, opts = {}) {
 
   return {
     visualPrompt,
-    imagePath: bg.imagePath,
-    size: bg.size,
+    imagePath: raster.imagePath,
+    size: raster.size,
     poemPath: poemOutputPath,
     poemPromptPath,
     imagePromptPath,

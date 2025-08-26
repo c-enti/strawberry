@@ -2,7 +2,7 @@
   "name": "server",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "start:ci": "ts-node ./bin/www.ts",
     "dev:ci": "DEBUG=* ts-node ./bin/www.ts",

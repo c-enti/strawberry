@@ -484,7 +484,7 @@ const crud = require("./crud");
 
 // Ebook renderer helper
 const { renderBookToPDF } = require("./ebook");
-const { generateBackgroundForPoem } = require("./imageGenerator");
+const { generateBackgroundForPoem } = require("./imageGenerator.cjs");
 
 // --- PROMPT PROCESSING ENDPOINT ---
 const { MockAIService } = require("./aiService");
@@ -1644,22 +1644,46 @@ app.post("/api/export/book", async (req, res) => {
   }
 });
 
-// --- Lightweight background export job API (in-memory) ---
-const exportJobs = {}; // jobId -> { state, progress, error, filePath }
+// --- Background export job API (SQLite-backed with in-memory fallback) ---
+let jobsModule = null;
+try {
+  jobsModule = require("./jobs");
+} catch (e) {
+  console.warn(
+    "jobs module not available, will use in-memory fallback",
+    e.message
+  );
+}
+
+const exportJobs = {}; // fallback in-memory jobs
 
 app.post("/api/export/job", async (req, res) => {
-  // Accept same payload as /api/export/book: { poems: [...] }
   const payload = req.body && Object.keys(req.body).length ? req.body : null;
+
+  // Primary path: try to enqueue in SQLite-backed jobs table
+  if (jobsModule) {
+    try {
+      const { id } = await jobsModule.enqueueJob(payload);
+      // Respond with DB id
+      res.status(202).json({ jobId: String(id) });
+      return;
+    } catch (e) {
+      console.warn(
+        "jobs.enqueueJob failed, falling back to in-memory",
+        e.message
+      );
+    }
+  }
+
+  // Fallback: in-memory behavior (existing logic)
   const jobId = uuidv4();
   exportJobs[jobId] = { state: "queued", progress: 0 };
 
-  // Start background processing
   (async () => {
     try {
       exportJobs[jobId].state = "preparing";
       exportJobs[jobId].progress = 10;
 
-      // Reuse /api/export/book's logic to resolve poems and prepare backgrounds
       let poems = payload && payload.poems ? payload.poems : null;
       if (!poems) {
         const samplePath = path.resolve(__dirname, "samples", "poems.json");
@@ -1673,11 +1697,9 @@ app.post("/api/export/job", async (req, res) => {
             : parsed;
       }
 
-      // Optionally generate images for each poem via the orchestrator if requested
       const { generateImages } = payload || {};
       if (generateImages) {
-        // lazy-load orchestrator to avoid cycles
-        const { generatePoemAndImage } = require("./imageGenerator");
+        const { generatePoemAndImage } = require("./imageGenerator.cjs");
         let i = 0;
         for (let p of poems) {
           exportJobs[jobId].state = "generating_images";
@@ -1693,7 +1715,6 @@ app.post("/api/export/job", async (req, res) => {
           i++;
         }
       } else {
-        // Generate backgrounds synchronously (stub) and update progress
         for (let p of poems) {
           if (!p.background) {
             const generated = generateBackgroundForPoem(p);
@@ -1729,8 +1750,18 @@ app.post("/api/export/job", async (req, res) => {
   res.status(202).json({ jobId });
 });
 
-app.get("/api/export/job/:id", (req, res) => {
+app.get("/api/export/job/:id", async (req, res) => {
   const id = req.params.id;
+  // Try DB lookup first
+  if (jobsModule) {
+    try {
+      const row = await jobsModule.getJob(id);
+      if (row) return res.json({ jobId: id, ...row });
+    } catch (e) {
+      console.warn("jobs.getJob failed", e.message);
+    }
+  }
+
   const job = exportJobs[id];
   if (!job) return res.status(404).json({ error: "Job not found" });
   res.json({ jobId: id, ...job });
@@ -1741,7 +1772,7 @@ app.post("/api/generate/poem-image", async (req, res) => {
   const { theme, format } = req.body || {};
   try {
     // lazy-load to avoid cycles during startup
-    const { generatePoemAndImage } = require("./imageGenerator");
+    const { generatePoemAndImage } = require("./imageGenerator.cjs");
     const result = await generatePoemAndImage({ theme, format });
     res.status(200).json({ success: true, result });
   } catch (e) {
