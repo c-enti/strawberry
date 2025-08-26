@@ -22,6 +22,11 @@ RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/ap
 #
 # RUN su node -c "npm install -g pnpm"
 
+# Enables reliable headless browser testing
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends xvfb \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # This Dockerfile is intentionally simple because the base image is very capable.
 # You only need to add lines here if you want to customize the container's
 # operating system or install global tools beyond what the base image provides.

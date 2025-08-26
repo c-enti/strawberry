@@ -9,7 +9,7 @@
     "lint": "next lint",
     "test": "jest",
     "test:e2e": "playwright test",
-    "postinstall": "npx playwright install --with-deps chromium"
+    "postinstall": "npx playwright install --with-deps"
   },
   "dependencies": {
     "next": "^15.3.3",

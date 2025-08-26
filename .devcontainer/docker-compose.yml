@@ -6,24 +6,66 @@ services:
     # We will build the dev container image using the instructions in devcontainer.json
     # The context '.' refers to the current directory
     build:
-      context: .
-      dockerfile: Dockerfile
+      # Go one directory up (to the project root) for the context
+      context: ..
+      # The path to the Dockerfile relative to the new context (the project root)
+      dockerfile: .devcontainer/Dockerfile
 
     # This command keeps the container running, so the dev environment doesn't exit
     command: sleep infinity
 
     # Mount your project code into the container
     volumes:
-      - ..:/workspaces:cached
+      - .:/workspaces:cached
+
+      - node_modules_client:/workspaces/client/node_modules
+      - node_modules_server:/workspaces/server/node_modules
+      - playwright_cache:/home/node/.cache/ms-playwright
+
+    environment:
+      # Pass environment variables from devcontainer.json/Codespace Secrets
+      # These will be accessible within the 'app' container
+      #- DATABASE_URL=${DATABASE_URL} # Example from devcontainer.json's remoteEnv
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_URL=${GEMINI_API_URL}
+      #- TEST_DATABASE_URL=${TEST_DATABASE_URL}
+
+    networks:
+      - app-network
 
     # Depend on the 'db' service. This ensures 'db' starts before 'app'
     depends_on:
-      - db
+      db: # Expecting an object
+        condition: service_healthy # Wait for db to be healthy before starting app
 
   # 2. This is your PostgreSQL database service
   db:
     # Use an official PostgreSQL image
     image: postgres:16
+
+    # Restart the container automatically if it stops
+    restart: unless-stopped
+
+    hostname: db # Explicitly set hostname, useful for DATABASE_URL
+
+    # Mount a volume to persist database data.
+    # This is crucial so your data isn't lost when you stop/restart the container.
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    environment:
+      # --- IMPORTANT: Use GitHub Codespace Secrets for these values ---
+      # These should match the credentials used in the DATABASE_URL in devcontainer.json
+      POSTGRES_DB: ${POSTGRES_DB:-chronoscraftDB} # Default 'chronoscraftDB' if secret not set
+      POSTGRES_USER: ${POSTGRES_USER:-chronosUSR} # Default 'chronosUSR' if secret not set
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chronosPWD} # Default 'chronosPWD' if secret not set
+
+    # Expose the PostgreSQL port to the host machine (optional, but good for debugging)
+    ports:
+      - "5432:5432"
+
+    networks:
+      - app-network
 
     # Configure Docker's built-in health check with comprehensive stages
     healthcheck:
@@ -43,25 +85,13 @@ services:
       retries: 3
       start_period: 30s
 
-    # Restart the container automatically if it stops
-    restart: unless-stopped
-
-    # Mount a volume to persist database data.
-    # This is crucial so your data isn't lost when you stop/restart the container.
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-
-    # Expose the PostgreSQL port to the host machine (optional, but good for debugging)
-    ports:
-      - "5432:5432"
-
-    # Set environment variables for the database from a .env file
-    # This will automatically create the user and database on first run.
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-
 # Define the named volume for data persistence
 volumes:
   postgres-data:
+  node_modules_client:
+  node_modules_server:
+  playwright_cache:
+
+networks:
+  app-network:
+    driver: bridge

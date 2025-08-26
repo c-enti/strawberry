@@ -1,3 +1,5 @@
+
+
 services:
   # The application service - VS Code attaches here
   app:
@@ -6,6 +8,10 @@ services:
     build:
       context: .. # The 'build' context points to the parent directory where .devcontainer is located
       dockerfile: .devcontainer/Dockerfile
+
+
+    command: sleep infinity # Keep the container running indefinitely
+
     volumes:
       # Mount the entire repository root into /chronos
       - ../:/chronos:cached
@@ -14,7 +20,6 @@ services:
       - node_modules_server:/chronos/server/node_modules
       - playwright_cache:/home/node/.cache/ms-playwright
 
-    command: sleep infinity # Keep the container running indefinitely
     environment:
       # Pass environment variables from devcontainer.json/Codespace Secrets
       # These will be accessible within the 'app' container

@@ -11,6 +11,8 @@ import googleCalendarRouter from "./routes/googleCalendar";
 import projectManagementRouter from "./routes/projectManagement";
 import genaiRouter from "./routes/genai";
 
+import { isServerReady } from "./lib/readiness";
+
 const app: Express = express();
 
 // Basic Express settings
@@ -25,8 +27,22 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 // Health check for CI
-app.get("/health", (req: Request, res: Response) => {
-  res.status(200).json({ status: "ok" });
+
+// Readiness endpoint
+app.use((req, res, next) => {
+  if (!isServerReady()) {
+    return res.status(503).json({ error: "Backend not ready. Please retry shortly." });
+  }
+  next();
+});
+
+// Readiness endpoint for CI/CD probes
+app.get("/ready", async (req, res) => {
+  if (isServerReady()) {
+    res.status(200).json({ status: "ready" });
+  } else {
+    res.status(503).json({ status: "not ready" });
+  }
 });
 
 // Routes
