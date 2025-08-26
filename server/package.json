@@ -13,6 +13,7 @@
     "verify-export:inproc": "node ./scripts/run_export_test_inproc.js",
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "worker": "node worker-sqlite.mjs",
     "test": "vitest",
     "test:export": "vitest run ./__tests__/export_text.test.mjs --reporter dot",
     "test:run": "vitest run",
