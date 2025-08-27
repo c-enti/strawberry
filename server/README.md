@@ -49,6 +49,28 @@ Test commands:
 - `npm run test:watch` - Explicit watch mode (same as test)
 - `npm run test:ci` - CI/CD with coverage reports
 
+Running tests with JOBS\_\* environment variables
+
+If you want to run the server test suite locally and control the SQLite-backed job queue behavior, set the following environment variables when running the tests. These are useful to isolate DB state or speed up recovery cycles in tests.
+
+- `JOBS_DB` — Path to the SQLite jobs DB file used by `server/jobs.js`. Default: `data/jobs.db`.
+- `JOBS_RECOVERY_INTERVAL_MS` — How often (ms) the server runs the recovery pass that calls `requeueStaleJobs`. Default: `300000` (5 minutes).
+- `JOBS_STALE_MS` — How old a `processing` job must be (ms) to be considered stale and requeued. Default: `600000` (10 minutes).
+
+Example (run all tests once with a temp jobs DB and speedy recovery):
+
+```bash
+# from repo root
+mkdir -p /tmp/strawberry-test-jobs
+JOBS_DB=/tmp/strawberry-test-jobs/jobs.db JOBS_RECOVERY_INTERVAL_MS=1000 JOBS_STALE_MS=5000 npm --prefix server run test:run
+```
+
+Notes:
+
+- Setting `JOBS_DB` to a temp file isolates test runs from your local `data/jobs.db` and is recommended when running tests locally or in CI.
+- Reducing `JOBS_RECOVERY_INTERVAL_MS` and `JOBS_STALE_MS` is useful for faster feedback while developing recovery logic; restore defaults for production-like runs.
+- The server test harness starts the server programmatically (it will not bind to the network when running under `NODE_ENV=test`), so these env vars are picked up by the in-process server used by the tests.
+
 Test coverage is tracked in `docs/ISSUES.md`.
 
 ## API Endpoints (Core Loop)
