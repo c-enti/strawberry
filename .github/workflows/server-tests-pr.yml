@@ -27,6 +27,9 @@ jobs:
       - name: Run server tests
         run: npm --prefix server test --silent
 
+      - name: Run server E2E worker test explicitly
+        run: npm --prefix server run test:run -- __tests__/e2e.worker.test.mjs
+
       - name: Upload server logs (if present)
         if: always()
         uses: actions/upload-artifact@v4
