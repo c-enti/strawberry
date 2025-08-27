@@ -33,6 +33,26 @@ async function startServer(options = {}) {
         module.exports._jobsDb = await jobsModule.openJobsDb(jobsDbPath);
         console.log("Jobs DB opened at", jobsDbPath);
 
+        // Run one immediate recovery pass at startup so any stale 'processing'
+        // jobs from a previous crash or shutdown are returned to 'queued'
+        // before the regular recovery interval begins.
+        try {
+          const requeuedAtStart = await jobsModule.requeueStaleJobs(
+            module.exports._jobsDb,
+            parseInt(process.env.JOBS_STALE_MS) || 10 * 60 * 1000
+          );
+          if (requeuedAtStart && requeuedAtStart > 0) {
+            console.log(
+              `Startup recovery: requeued ${requeuedAtStart} stale jobs`
+            );
+          }
+        } catch (e) {
+          console.warn(
+            "Startup requeueStaleJobs failed",
+            e && e.message ? e.message : e
+          );
+        }
+
         // Start periodic recovery pass to requeue stale jobs
         const recoveryInterval =
           parseInt(process.env.JOBS_RECOVERY_INTERVAL_MS) || 5 * 60 * 1000; // default 5m
@@ -59,8 +79,19 @@ async function startServer(options = {}) {
       );
     }
 
-    // 2. Then initialize Puppeteer
-    await startPuppeteer();
+    // 2. Then initialize Puppeteer (skip if explicitly disabled for tests)
+    const skipPuppeteer =
+      process.env.SKIP_PUPPETEER === "true" ||
+      process.env.SKIP_PUPPETEER === "1";
+    if (skipPuppeteer) {
+      console.log(
+        "SKIP_PUPPETEER=true - skipping Puppeteer initialization (test/CI mode)"
+      );
+      serviceState.puppeteer.startupPhase = "skipped";
+      serviceState.puppeteer.ready = false;
+    } else {
+      await startPuppeteer();
+    }
 
     // 3. Start the server only after all dependencies are ready
     // Decide whether to call app.listen: by default true, but tests should
