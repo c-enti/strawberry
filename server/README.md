@@ -49,6 +49,28 @@ Test commands:
 - `npm run test:watch` - Explicit watch mode (same as test)
 - `npm run test:ci` - CI/CD with coverage reports
 
+Running tests with JOBS\_\* environment variables
+
+If you want to run the server test suite locally and control the SQLite-backed job queue behavior, set the following environment variables when running the tests. These are useful to isolate DB state or speed up recovery cycles in tests.
+
+- `JOBS_DB` — Path to the SQLite jobs DB file used by `server/jobs.js`. Default: `data/jobs.db`.
+- `JOBS_RECOVERY_INTERVAL_MS` — How often (ms) the server runs the recovery pass that calls `requeueStaleJobs`. Default: `300000` (5 minutes).
+- `JOBS_STALE_MS` — How old a `processing` job must be (ms) to be considered stale and requeued. Default: `600000` (10 minutes).
+
+Example (run all tests once with a temp jobs DB and speedy recovery):
+
+```bash
+# from repo root
+mkdir -p /tmp/strawberry-test-jobs
+JOBS_DB=/tmp/strawberry-test-jobs/jobs.db JOBS_RECOVERY_INTERVAL_MS=1000 JOBS_STALE_MS=5000 npm --prefix server run test:run
+```
+
+Notes:
+
+- Setting `JOBS_DB` to a temp file isolates test runs from your local `data/jobs.db` and is recommended when running tests locally or in CI.
+- Reducing `JOBS_RECOVERY_INTERVAL_MS` and `JOBS_STALE_MS` is useful for faster feedback while developing recovery logic; restore defaults for production-like runs.
+- The server test harness starts the server programmatically (it will not bind to the network when running under `NODE_ENV=test`), so these env vars are picked up by the in-process server used by the tests.
+
 Test coverage is tracked in `docs/ISSUES.md`.
 
 ## API Endpoints (Core Loop)
@@ -187,6 +209,58 @@ node server/scripts/run_export_test_inproc.js
 
 # run smoke export (networked)
 bash server/scripts/smoke-export.sh
+```
+
+## Worker CLI & Startup recovery smoke test
+
+You can run a quick local smoke test that verifies the server's startup recovery pass will requeue stale `processing` jobs:
+
+```bash
+# from repo root
+node server/scripts/smoke_startup_requeue.js
+```
+
+This script seeds a stale `processing` job into a temp `JOBS_DB`, starts the server programmatically in `NODE_ENV=test` with `SKIP_PUPPETEER=true`, and confirms the job is returned to `queued` state. Useful when validating the recovery behavior locally before opening a PR.
+
+To run the worker CLI (polling worker) separately, use the provided CLI scripts (if available) or run the worker via Node in a separate process with `JOBS_DB` pointing to your jobs DB file. Example:
+
+```bash
+# start worker (example CLI if present)
+node server/worker-sqlite.mjs --jobs-db /tmp/jobs.db
+```
+
+## Job metrics & log rotation
+
+A lightweight metrics endpoint is available to inspect job queue counts:
+
+```bash
+# GET /api/jobs/metrics
+curl http://localhost:3000/api/jobs/metrics
+```
+
+This returns JSON with counts for `queued`, `processing`, `done`, and `failed`.
+
+A simple log rotation helper is provided at `scripts/logrotate.sh`. Run it periodically (cron or CI cleanup) to keep `server/logs/` bounded.
+
+### Job queue metrics endpoint
+
+There is a simple metrics endpoint that returns counts of queued/processing/done jobs:
+
+```bash
+# GET /api/export/jobs/metrics
+curl http://localhost:3000/api/export/jobs/metrics
+# response: { "queued": 1, "processing": 0, "done": 3 }
+```
+
+This prefers the SQLite jobs DB (when `JOBS_DB` is set and opened) and falls back to the in-memory job map when the DB is not available.
+
+### Log rotation helper
+
+A small rotation script is available at `scripts/logrotate.sh` which keeps the most recent N log files and removes older files. Example:
+
+```bash
+# keep last 10 files, remove older than 30 days
+bash scripts/logrotate.sh server/logs 10 30
 ```
 
 Notes:

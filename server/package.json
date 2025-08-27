@@ -13,6 +13,7 @@
     "verify-export:inproc": "node ./scripts/run_export_test_inproc.js",
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "worker": "node worker-sqlite.mjs",
     "test": "vitest",
     "test:export": "vitest run ./__tests__/export_text.test.mjs --reporter dot",
     "test:run": "vitest run",
@@ -44,6 +45,7 @@
     "pdfjs-dist": "^4.1.266",
     "prisma": "^6.14.0",
     "supertest": "^7.1.3",
+    "typescript": "^5.4.2",
     "vitest": "^3.2.4"
   }
 }
