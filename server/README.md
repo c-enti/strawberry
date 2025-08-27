@@ -211,6 +211,24 @@ node server/scripts/run_export_test_inproc.js
 bash server/scripts/smoke-export.sh
 ```
 
+## Worker CLI & Startup recovery smoke test
+
+You can run a quick local smoke test that verifies the server's startup recovery pass will requeue stale `processing` jobs:
+
+```bash
+# from repo root
+node server/scripts/smoke_startup_requeue.js
+```
+
+This script seeds a stale `processing` job into a temp `JOBS_DB`, starts the server programmatically in `NODE_ENV=test` with `SKIP_PUPPETEER=true`, and confirms the job is returned to `queued` state. Useful when validating the recovery behavior locally before opening a PR.
+
+To run the worker CLI (polling worker) separately, use the provided CLI scripts (if available) or run the worker via Node in a separate process with `JOBS_DB` pointing to your jobs DB file. Example:
+
+```bash
+# start worker (example CLI if present)
+node server/worker-sqlite.mjs --jobs-db /tmp/jobs.db
+```
+
 Notes:
 
 - The extraction script `server/scripts/extract-pdf-text.js` uses a lightweight PDF parser to extract text for assertions.
