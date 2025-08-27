@@ -229,6 +229,19 @@ To run the worker CLI (polling worker) separately, use the provided CLI scripts 
 node server/worker-sqlite.mjs --jobs-db /tmp/jobs.db
 ```
 
+## Job metrics & log rotation
+
+A lightweight metrics endpoint is available to inspect job queue counts:
+
+```bash
+# GET /api/jobs/metrics
+curl http://localhost:3000/api/jobs/metrics
+```
+
+This returns JSON with counts for `queued`, `processing`, `done`, and `failed`.
+
+A simple log rotation helper is provided at `scripts/logrotate.sh`. Run it periodically (cron or CI cleanup) to keep `server/logs/` bounded.
+
 ### Job queue metrics endpoint
 
 There is a simple metrics endpoint that returns counts of queued/processing/done jobs:
