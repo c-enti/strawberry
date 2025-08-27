@@ -10,6 +10,7 @@ jobs:
   server-tests:
     name: Server tests (PR)
     runs-on: ubuntu-latest
+    # JOBS_DB will be set in a setup step to a temp path via GITHUB_ENV
 
     steps:
       - name: Checkout repository
@@ -24,8 +25,12 @@ jobs:
       - name: Install server deps
         run: npm --prefix server ci
 
-      - name: Run server tests
-        run: npm --prefix server test --silent
+      - name: Set JOBS_DB temp path for tests
+        run: |
+          echo "JOBS_DB=${{ github.workspace }}/.tmp_ci_jobs.db" >> $GITHUB_ENV
+
+      - name: Run server tests (unit)
+        run: SKIP_PUPPETEER=true npm --prefix server test --silent
 
       - name: Run server E2E worker test explicitly
         run: npm --prefix server run test:run -- __tests__/e2e.worker.test.mjs
