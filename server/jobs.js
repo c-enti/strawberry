@@ -1,6 +1,8 @@
-import sqlite3 from "sqlite3";
-import path from "path";
-import fs from "fs";
+const sqlite3 = require("sqlite3").verbose
+  ? require("sqlite3").verbose()
+  : require("sqlite3");
+const path = require("path");
+const fs = require("fs");
 
 // Promise-wrapper around sqlite3.Database
 function wrapDb(db) {
@@ -42,7 +44,7 @@ function wrapDb(db) {
   };
 }
 
-export async function openJobsDb(dbPath) {
+function openJobsDb(dbPath) {
   const dir = path.dirname(dbPath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return new Promise((resolve, reject) => {
@@ -72,7 +74,7 @@ export async function openJobsDb(dbPath) {
   });
 }
 
-export async function enqueueJob(db, payload) {
+async function enqueueJob(db, payload) {
   const now = Date.now();
   const res = await db.run(
     `INSERT INTO jobs (payload, state, progress, created_at, updated_at) VALUES (?, 'queued', 0, ?, ?)`,
@@ -83,7 +85,7 @@ export async function enqueueJob(db, payload) {
   return res.lastID;
 }
 
-export async function claimNextJob(db, lockerId = "worker-1") {
+async function claimNextJob(db, lockerId = "worker-1") {
   const row = await db.get(
     `SELECT * FROM jobs WHERE state = 'queued' ORDER BY id ASC LIMIT 1`
   );
@@ -103,7 +105,7 @@ export async function claimNextJob(db, lockerId = "worker-1") {
   });
 }
 
-export async function finalizeJob(db, id, filePath) {
+async function finalizeJob(db, id, filePath) {
   const now = Date.now();
   await db.run(
     `UPDATE jobs SET state = 'done', file_path = ?, progress = 100, updated_at = ? WHERE id = ?`,
@@ -113,7 +115,7 @@ export async function finalizeJob(db, id, filePath) {
   );
 }
 
-export async function failJob(db, id, errMsg) {
+async function failJob(db, id, errMsg) {
   const now = Date.now();
   await db.run(
     `UPDATE jobs SET state = 'failed', error = ?, updated_at = ? WHERE id = ?`,
@@ -122,3 +124,11 @@ export async function failJob(db, id, errMsg) {
     id
   );
 }
+
+module.exports = {
+  openJobsDb,
+  enqueueJob,
+  claimNextJob,
+  finalizeJob,
+  failJob,
+};

@@ -16,16 +16,25 @@ describe("e2e: worker processes queued job", () => {
     await db.close();
 
     // Start worker as a subprocess pointed at our test DB
-    const workerScript = path.resolve(
+    // Prefer CommonJS worker when present to match server module system
+    const candidateCjs = path.resolve(
+      path.join(__dirname, "..", "worker-sqlite.cjs")
+    );
+    const candidateMjs = path.resolve(
       path.join(__dirname, "..", "worker-sqlite.mjs")
     );
+    const workerScript = fs.existsSync(candidateCjs)
+      ? candidateCjs
+      : candidateMjs;
     const worker = spawn(process.execPath, [workerScript], {
       cwd: path.join(__dirname, ".."),
-      env: { ...process.env, JOBS_DB: dbPath },
+      env: { ...process.env, JOBS_DB: dbPath, E2E_TEST_RUN: "true" },
       stdio: ["ignore", "pipe", "pipe"],
     });
 
+    let stdout = "";
     let stderr = "";
+    worker.stdout.on("data", (d) => (stdout += String(d)));
     worker.stderr.on("data", (d) => (stderr += String(d)));
 
     // Poll the DB until the job reaches a terminal state (done|failed) or timeout
@@ -58,11 +67,15 @@ describe("e2e: worker processes queued job", () => {
       // ignore
     }
 
+    // Print worker logs for debugging before making assertions
+    if (stdout) console.error("[worker stdout]\n" + stdout);
+    if (stderr) console.error("[worker stderr]\n" + stderr);
+
     if (!row) {
-      // Provide stderr to help debugging if test times out
-      throw new Error(`Job not processed in time. Worker stderr:\n${stderr}`);
+      throw new Error("Job not found in DB after timeout");
     }
 
+    // Final assertion: job should be completed
     expect(row.state).toBe("done");
   });
 });

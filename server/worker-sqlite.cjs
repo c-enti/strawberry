@@ -1,25 +1,17 @@
-import path from "path";
-import fs from "fs";
-
-import { fileURLToPath } from "url";
+const path = require("path");
+const fs = require("fs");
 
 /**
- * startWorker
- * - dbPath: path to sqlite jobs DB
- * - pollInterval: milliseconds between polls when idle
- * - runOnce: if true, process at most one job then exit
- * - workerId: identifier saved into locked_by
+ * CommonJS worker entry — mirrors logic in worker-sqlite.mjs but uses require
+ * so it runs cleanly under the server's CommonJS module system.
  */
-export async function startWorker({
+async function startWorker({
   dbPath = path.join(process.cwd(), "data", "your-database-name.db"),
   pollInterval = 2000,
   runOnce = false,
   workerId = "worker-1",
 } = {}) {
-  // Dynamic import to handle ESM/CommonJS interop when this file is run
-  // directly via `node` while the package type is commonjs.
-  const jobsModule = await import("./jobs.js");
-  const jobs = jobsModule.default || jobsModule;
+  const jobs = require("./jobs.js");
   const { openJobsDb, claimNextJob, finalizeJob, failJob } = jobs;
 
   const db = await openJobsDb(dbPath);
@@ -27,7 +19,6 @@ export async function startWorker({
   async function processOnce() {
     const job = await claimNextJob(db, workerId);
     if (!job) {
-      // No job claimed
       console.error(`[worker:${workerId}] no queued job found`);
       return false;
     }
@@ -35,7 +26,6 @@ export async function startWorker({
     console.error(`[worker:${workerId}] claimed job ${job.id}`);
 
     try {
-      // Minimal processing: create a small placeholder output file
       const outPath = path.join(path.dirname(dbPath), `job-${job.id}.out.pdf`);
       await fs.promises.writeFile(outPath, `job ${job.id} output`);
       await finalizeJob(db, job.id, outPath);
@@ -60,8 +50,6 @@ export async function startWorker({
   }
 
   try {
-    // long-running polling loop
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       await processOnce();
       await new Promise((r) => setTimeout(r, pollInterval));
@@ -71,21 +59,13 @@ export async function startWorker({
   }
 }
 
-// CLI entry when invoked directly: `node server/worker-sqlite.mjs`
-const __filename = fileURLToPath(import.meta.url);
+module.exports = { startWorker };
 
-// Robust detection: check any argv entry basename matches this file's basename.
-// This handles absolute, relative, and tool-invoked variants used by tests/CI.
-const launchedDirectly = process.argv.some((a) =>
-  a ? path.basename(a) === path.basename(__filename) : false
-);
-
-if (launchedDirectly) {
+// CLI behaviour when run directly
+if (require.main === module) {
   const dbPath =
     process.env.JOBS_DB ||
     path.join(process.cwd(), "data", "your-database-name.db");
-
-  // Test mode: if E2E_TEST_RUN is set, run a single pass quickly and exit
   const runOnce = process.env.E2E_TEST_RUN === "true" || false;
   const pollInterval = runOnce
     ? 200
@@ -94,12 +74,11 @@ if (launchedDirectly) {
   console.error(
     `[worker] CLI start detected. JOBS_DB=${dbPath} runOnce=${runOnce}`
   );
-  // Give a clear startup log for test debugging
-  console.error(`
-[worker] starting with pid=${
-    process.pid
-  } cwd=${process.cwd()} pollInterval=${pollInterval}
-  `);
+  console.error(
+    `[worker] starting with pid=${
+      process.pid
+    } cwd=${process.cwd()} pollInterval=${pollInterval}`
+  );
 
   startWorker({ dbPath, runOnce, pollInterval }).catch((err) => {
     console.error(err && err.stack ? err.stack : err);
