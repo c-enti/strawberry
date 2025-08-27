@@ -24,6 +24,41 @@ async function startServer(options = {}) {
     serviceState.db.startupPhase = "ready";
     console.log("Database initialized successfully");
 
+    // 1.b Initialize jobs DB for background export queue (optional)
+    try {
+      if (jobsModule && jobsModule.openJobsDb) {
+        const jobsDbPath =
+          process.env.JOBS_DB || path.join(process.cwd(), "data", "jobs.db");
+        // Open and keep a handle to reuse across requests/workers
+        module.exports._jobsDb = await jobsModule.openJobsDb(jobsDbPath);
+        console.log("Jobs DB opened at", jobsDbPath);
+
+        // Start periodic recovery pass to requeue stale jobs
+        const recoveryInterval =
+          parseInt(process.env.JOBS_RECOVERY_INTERVAL_MS) || 5 * 60 * 1000; // default 5m
+        module.exports._jobsRecoveryTimer = setInterval(async () => {
+          try {
+            const requeued = await jobsModule.requeueStaleJobs(
+              module.exports._jobsDb,
+              parseInt(process.env.JOBS_STALE_MS) || 10 * 60 * 1000
+            );
+            if (requeued && requeued > 0)
+              console.log(`Requeued ${requeued} stale jobs`);
+          } catch (e) {
+            console.warn(
+              "requeueStaleJobs failed",
+              e && e.message ? e.message : e
+            );
+          }
+        }, recoveryInterval);
+      }
+    } catch (e) {
+      console.warn(
+        "Failed to initialize jobs DB or recovery timer:",
+        e && e.message ? e.message : e
+      );
+    }
+
     // 2. Then initialize Puppeteer
     await startPuppeteer();
 
@@ -1663,14 +1698,31 @@ app.post("/api/export/job", async (req, res) => {
   // Primary path: try to enqueue in SQLite-backed jobs table
   if (jobsModule) {
     try {
-      const { id } = await jobsModule.enqueueJob(payload);
-      // Respond with DB id
-      res.status(202).json({ jobId: String(id) });
-      return;
+      // Prefer explicit DB path when provided (tests set JOBS_DB), otherwise use server default
+      const dbPath =
+        process.env.JOBS_DB ||
+        path.join(process.cwd(), "data", "your-database-name.db");
+      const db = await jobsModule.openJobsDb(dbPath);
+      try {
+        const id = await jobsModule.enqueueJob(db, payload);
+        await db.close();
+        // Respond with DB id
+        res.status(202).json({ jobId: String(id) });
+        return;
+      } catch (e) {
+        // ensure DB closed on error
+        try {
+          await db.close();
+        } catch (ee) {}
+        console.warn(
+          "jobs.enqueueJob failed, falling back to in-memory",
+          e && e.message ? e.message : e
+        );
+      }
     } catch (e) {
       console.warn(
-        "jobs.enqueueJob failed, falling back to in-memory",
-        e.message
+        "jobs DB open failed, falling back to in-memory",
+        e && e.message ? e.message : e
       );
     }
   }
@@ -1909,3 +1961,36 @@ async function checkDatabaseHealth() {
     return { ok: false, error: err.message };
   }
 }
+
+// Graceful shutdown: clear jobs recovery timer and close jobs DB if open
+async function gracefulShutdown(signal) {
+  console.log("Graceful shutdown:", signal || "exit");
+  try {
+    if (module.exports._jobsRecoveryTimer) {
+      clearInterval(module.exports._jobsRecoveryTimer);
+      module.exports._jobsRecoveryTimer = null;
+    }
+    if (module.exports._jobsDb) {
+      try {
+        await module.exports._jobsDb.close();
+        console.log("Jobs DB closed");
+      } catch (e) {
+        console.warn(
+          "Error closing jobs DB during shutdown",
+          e && e.message ? e.message : e
+        );
+      }
+      module.exports._jobsDb = null;
+    }
+  } catch (e) {
+    console.warn(
+      "Error during graceful shutdown",
+      e && e.message ? e.message : e
+    );
+  }
+  // allow other listeners to run then exit
+  process.exit(0);
+}
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

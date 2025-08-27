@@ -125,10 +125,33 @@ async function failJob(db, id, errMsg) {
   );
 }
 
+// Requeue jobs that have been locked for longer than maxAgeMs (milliseconds)
+// Returns number of jobs requeued
+async function requeueStaleJobs(db, maxAgeMs = 10 * 60 * 1000) {
+  const cutoff = Date.now() - maxAgeMs;
+  // Find jobs that are processing and locked_at older than cutoff
+  const rows = await db.all(
+    `SELECT id FROM jobs WHERE state = 'processing' AND locked_at IS NOT NULL AND locked_at < ?`,
+    cutoff
+  );
+  if (!rows || rows.length === 0) return 0;
+  const ids = rows.map((r) => r.id);
+  const now = Date.now();
+  // Reset their state to queued and clear locks
+  const placeholders = ids.map(() => "?").join(",");
+  await db.run(
+    `UPDATE jobs SET state = 'queued', locked_by = NULL, locked_at = NULL, updated_at = ? WHERE id IN (${placeholders})`,
+    now,
+    ...ids
+  );
+  return ids.length;
+}
+
 module.exports = {
   openJobsDb,
   enqueueJob,
   claimNextJob,
   finalizeJob,
   failJob,
+  requeueStaleJobs,
 };

@@ -4,13 +4,13 @@ This document provides a summary and assessment of the GitHub Actions workflows 
 
 ## Workflow Summary
 
-- **`ci-quick-smoke.yml`**: Runs on pull requests to perform a non-blocking "quick smoke" test. It checks if the server starts and the `/health` endpoint is responsive. This is a good, fast, informational check.
+- **`ci-quick-smoke.yml`** — Fast PR-level smoke that verifies server startup and a `/health` ping.
 
-- **`server-tests-pr.yml`**: Runs on pull requests to `main` and feature branches. It executes the server-side tests. This is a critical workflow for ensuring PRs are not breaking existing functionality.
+- **`server-tests-pr.yml`** — PR workflow that runs the server unit/integration test suite (Vitest). Recently extended to explicitly run the worker E2E test (`__tests__/e2e.worker.test.mjs`) to prevent regressions in the job/worker flow.
 
-- **`ci-smoke-puppeteer.yml`**: Runs on pushes to `main`, on a schedule, and can be manually dispatched. It performs a full end-to-end test of the PDF export functionality with Puppeteer. This is a vital but slower-running check for the core feature of the application.
+- **`ci-smoke-puppeteer.yml`** — Nightly and push workflow that runs a full Puppeteer-based export smoke test. It produces artifacts (PDF + logs) for debugging export regressions.
 
-- **`verify-export.yml`**: Runs on pushes and pull requests to `main`. It performs an in-process export test and runs client-side tests. This provides a good balance of speed and coverage for the export functionality without a full browser dependency.
+- **`verify-export.yml`** — Lightweight export verification (in-process) used for quicker feedback without full browser dependencies.
 
 ## Overview and Assessment
 
@@ -24,12 +24,11 @@ This document provides a summary and assessment of the GitHub Actions workflows 
 
 - **Overall**: The workflows provide good test coverage for the application, with a clear separation between quick checks, pull request tests, and critical path validation.
 
-## To-Do
+## To-Do (recent)
 
-- [x] Consolidate `ci-server-tests-pr.yml`, `ci-server-tests.yml`, and `server-tests.yml` into a single `server-tests-pr.yml`.
-- [x] Rename `ci-server-tests-pr.yml` to `server-tests-pr.yml` for clarity.
-- [x] Delete the redundant `ci-server-tests.yml` and `server-tests.yml` files.
-- [x] Update this document to reflect the changes.
+- [x] Add explicit worker E2E step to `server-tests-pr.yml` so PRs gate the `e2e.worker.test.mjs` path (prevents job/worker regressions).
+- [x] Keep nightly full export smoke (`ci-smoke-puppeteer.yml`) enabled on `main` and upload artifacts for debugging.
+- [ ] Consider adding a nightly server-tests job (full test-suite) for proactive regression detection.
 
 ## CI Notes
 
@@ -43,47 +42,8 @@ This document provides a summary and assessment of the GitHub Actions workflows 
 
 ### Pre-flight Check Script
 
-To improve the reliability and robustness of the CI pipeline, a pre-flight check script will be implemented. This script will verify that all necessary dependencies and configurations are in place before the main test suite is executed.
-
-#### Assessment
-
-**Pros:**
-
-- **Increased Reliability**: This approach directly tackles the problem of environment-related test failures. By verifying dependencies and configuration before tests run, you can prevent a whole class of CI errors.
-- **Idempotency and Efficiency**: A well-written script will only install dependencies if they are missing. This makes CI runs faster and more consistent, as you're not re-installing software on every run if it's already present in a cached runner.
-- **Centralized Logic**: Instead of scattering `apt-get install` and `export` commands across multiple workflow files, you centralize the logic in one place. This makes it easier to manage and update your CI requirements. If you need to add a new dependency, you only have to change one script.
-- **Improved Debugging**: If a CI job fails, the logs from this script will provide a clear, immediate indication of whether the failure was due to a missing requirement. This saves time trying to diagnose issues in the test logs themselves.
-- **Developer Parity**: Developers can run the same script locally to ensure their development environment is configured correctly, reducing the "it works on my machine" problem.
-
-**Cons:**
-
-- **Initial Setup**: There is a small upfront effort to write and integrate the script.
-- **Platform Specificity**: The script would need to be written for the specific OS of your CI runners (in this case, `ubuntu-latest`). If you ever need to support other operating systems, the script would need to be made more complex or you'd need separate scripts.
-
-#### Suggestions for Implementation
-
-1.  **Create a Central Script**: A shell script named `scripts/verify-ci-env.sh` will be created to house the logic.
-2.  **Script Steps**: The script will perform the following actions:
-    - Check for the existence of `google-chrome-stable`.
-    - Install it if it's missing.
-    - Ensure `CHROME_PATH` is set and exported to `$GITHUB_ENV`.
-    - Ensure `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD` is set to `true` and exported to `$GITHUB_ENV`.
-3.  **Integration into Workflows**: The workflow YAML files will be updated to call this script in a single step.
-
-#### To-Do
-
-- [x] Create the `scripts/verify-ci-env.sh` script with the logic described above.
-- [x] Make the script executable.
-- [x] Update `server-tests-pr.yml` to use the new script.
-- [x] Update `ci-smoke-puppeteer.yml` to use the new script.
-- [x] Update `verify-export.yml` to use the new script.
-- [x] Update this document to reflect the completed changes.
+The repository includes `scripts/verify-ci-env.sh` and workflows already call it to ensure the CI runner has the required system-level dependencies (Chrome/Chromium, CHROME_PATH, and `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true`). This central script reduces flaky CI caused by missing system packages and is referenced by server test and smoke workflows.
 
 ### Successful Local Test
 
-- `export GITHUB_ENV=$(mktemp) && ./scripts/verify-ci-env.sh && cat $GITHUB_ENV && rm $GITHUB_ENV`
-    - Google Chrome is already installed.
-    - Chrome path set to: /usr/bin/google-chrome-stable
-    - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD set to true.
-    - CHROME_PATH=/usr/bin/google-chrome-stable
-    - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+Local validations were performed during development (verify-ci-env and server Vitest runs). Example: running the server E2E locally produced expected worker logs and a passing Vitest result for `__tests__/e2e.worker.test.mjs`.
