@@ -1850,6 +1850,42 @@ app.get("/api/export/job/:id", async (req, res) => {
   res.json({ jobId: id, ...job });
 });
 
+// Job queue metrics: return counts for queued/processing/done
+app.get("/api/export/jobs/metrics", async (req, res) => {
+  try {
+    // Prefer DB-backed metrics when jobs DB is open
+    if (module.exports._jobsDb) {
+      const q = await module.exports._jobsDb.get(
+        `SELECT COUNT(*) as cnt FROM jobs WHERE state = 'queued'`
+      );
+      const p = await module.exports._jobsDb.get(
+        `SELECT COUNT(*) as cnt FROM jobs WHERE state = 'processing'`
+      );
+      const d = await module.exports._jobsDb.get(
+        `SELECT COUNT(*) as cnt FROM jobs WHERE state = 'done'`
+      );
+      return res.json({
+        queued: q.cnt || 0,
+        processing: p.cnt || 0,
+        done: d.cnt || 0,
+      });
+    }
+
+    // Fallback: in-memory exportJobs
+    const counts = { queued: 0, processing: 0, done: 0 };
+    Object.values(exportJobs).forEach((j) => {
+      if (j && j.state && counts[j.state] !== undefined) counts[j.state]++;
+    });
+    return res.json(counts);
+  } catch (e) {
+    console.warn(
+      "Failed to collect job metrics",
+      e && e.message ? e.message : e
+    );
+    return res.status(500).json({ error: "Failed to collect job metrics" });
+  }
+});
+
 // --- Synchronous poem->image generation endpoint ---
 app.post("/api/generate/poem-image", async (req, res) => {
   const { theme, format } = req.body || {};

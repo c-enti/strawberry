@@ -229,6 +229,27 @@ To run the worker CLI (polling worker) separately, use the provided CLI scripts 
 node server/worker-sqlite.mjs --jobs-db /tmp/jobs.db
 ```
 
+### Job queue metrics endpoint
+
+There is a simple metrics endpoint that returns counts of queued/processing/done jobs:
+
+```bash
+# GET /api/export/jobs/metrics
+curl http://localhost:3000/api/export/jobs/metrics
+# response: { "queued": 1, "processing": 0, "done": 3 }
+```
+
+This prefers the SQLite jobs DB (when `JOBS_DB` is set and opened) and falls back to the in-memory job map when the DB is not available.
+
+### Log rotation helper
+
+A small rotation script is available at `scripts/logrotate.sh` which keeps the most recent N log files and removes older files. Example:
+
+```bash
+# keep last 10 files, remove older than 30 days
+bash scripts/logrotate.sh server/logs 10 30
+```
+
 Notes:
 
 - The extraction script `server/scripts/extract-pdf-text.js` uses a lightweight PDF parser to extract text for assertions.
