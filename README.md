@@ -1,8 +1,7 @@
 # AetherPress - AI-Powered eBook Creation
 
-Document Version: dv01
-Datetime: 2025-09-29 17:00 UTC
-Branch: feature/anew
+Datetime: 2025-10-01 10:00 UTC
+Branch: aether-rewrite/client-phase0
 
 AetherPress is an AI-powered eBook creation platform focused on delivering a streamlined experience from concept to publication. The project follows a prototype-first approach, starting with V0.1 to establish core functionality before expanding to V1.0.
 
@@ -133,29 +132,39 @@ See the `docs/` directory for devcontainer setup, dependency management, and arc
 
 ## Getting Started
 
-### Backend
+### Quick Start (Client-v2 + Server)
 
-1. Navigate to the server directory:
+Use these commands from the repo root to run the latest client-v2 with server proxy:
+
+```bash
+# Terminal 1: Start client-v2 dev server
+npm --prefix client-v2 run dev
+
+# Terminal 2: Start server with preview proxy
+PREVIEW_CLIENT_V2_ENABLED=1 CLIENT_V2_PROXY_URL=http://127.0.0.1:5174 node server/index.js
+```
+
+### Legacy Setup
+
+1. Start the server:
+
    ```bash
    cd server
    npm install
-   npm run dev
+   npm run dev    # runs Express server from index.js
    ```
-   (This runs the Express server from `/server/index.js`.)
 
-### Frontend
-
-1. Navigate to the client directory:
+2. Start the client:
    ```bash
    cd client
    npm install
-   npm run dev
+   npm run dev    # runs Svelte app on Vite
    ```
-   (This runs the Svelte app on Vite.)
 
-### Access the Application
+### Access Points
 
-- **Frontend**: [http://localhost:5173](http://localhost:5173)
+- **Client-v2**: [http://localhost:5174](http://localhost:5174)
+- **Legacy Client**: [http://localhost:5173](http://localhost:5173)
 - **Backend API**: [http://localhost:3000](http://localhost:3000)
 
 ## CI/CD Workflows

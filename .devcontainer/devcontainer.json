@@ -23,7 +23,8 @@
   "postCreateCommand": "cd client && npm install && npx playwright install --with-deps || true && cd ../server && PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 npm install && cd .. && npm install -g concurrently",
 
   "postAttachCommand": {
-    "server only": "cd ./server && npm run dev"
+    "client + server": "PREVIEW_CLIENT_V2_ENABLED=1 CLIENT_V2_PROXY_URL=http://127.0.0.1:5174 node server/index.js"
+    //"server only": "cd ./server && npm run dev"
     //- "client + server": "concurrently 'cd ./client && npm run dev' 'cd ./server && npm run dev'"
     //x "client + server": "bash ./start-app.sh"
   },
@@ -51,14 +52,14 @@
         "terminal.integrated.defaultProfile.linux": "bash",
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "[svelte]": {
-          "editor.defaultFormatter": "svelte.svelte-vscode"
-        },
         "[javascript]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode"
         },
         "[json]": {
           "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[svelte]": {
+          "editor.defaultFormatter": "svelte.svelte-vscode"
         },
         "workbench.iconTheme": "vscode-icons",
         "github.copilot.enable": {

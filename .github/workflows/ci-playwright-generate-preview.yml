@@ -6,6 +6,9 @@ on:
 
 jobs:
   generate-preview-smoke:
+    # Skip Playwright runs for prototype branch 'aether-dev' (phase 0).
+    # Playwright smoke tests are heavy and not required until later phases.
+    if: ${{ github.event.pull_request.base.ref != 'aether-dev' }}
     name: Playwright smoke - Generate Preview (non-blocking)
     runs-on: ubuntu-latest
 
