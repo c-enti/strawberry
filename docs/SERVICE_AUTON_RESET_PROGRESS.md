@@ -1,12 +1,33 @@
 # SERVICE-AUTON Reset: Implementation Progress
 
 **Date**: December 26, 2025 @ 2:45 PM  
-**Branch**: PERF-VALIDATE_Fixes (pushed to origin)  
+**Branch**: PERF-VALIDATE_Fixes → **transitioning to SERVICE-AUTON-reset (fresh from ASYNC-INFRA)**  
 **Status**: IMPLEMENTATION IN PROGRESS
 
 ---
 
-## Part 1: Pre-Implementation Verification ✅ IN PROGRESS
+## ⚡ Critical Course Correction: Branch Strategy
+
+**Decision**: Create Phase 2 work on a clean branch directly from ASYNC-INFRA
+
+**Rationale**: The current PERF-VALIDATE_Fixes branch inherits SERVICE-AUTON-OLD's failures. Phase 2 needs a clean foundation with only proven Phase 1 code.
+
+**Action**:
+
+```bash
+# From current shell, execute:
+git checkout ASYNC-INFRA
+git checkout -b SERVICE-AUTON-reset
+git push -u origin SERVICE-AUTON-reset
+```
+
+**After Branch Creation**: Proceed with Step 2.1 (Reference Service) on the new SERVICE-AUTON-reset branch.
+
+---
+
+## Part 1: Pre-Implementation Verification ✅ COMPLETE
+
+All 3 steps passed. Phase 1 is verified healthy. Ready to proceed to Phase 1 Extension.
 
 ### ✅ Step 1.0: Verify ASYNC-INFRA Components Exist
 
@@ -52,22 +73,52 @@
 
 ---
 
-### ⏳ Step 1.2: Run Phase 1 Test Suite
+### ✅ Step 1.2: Run Phase 1 Test Suite
 
-**Status**: NEXT STEP
+**Status**: COMPLETED
 
 **Test Script**: `scripts/test-async-infra-unit.js`
 
-**Command to Run**:
+**Test Results**: 🎯 ALL TESTS PASSED
 
-```bash
-cd /workspaces/strawberry
-node scripts/test-async-infra-unit.js
+```
+✅ timingResolver (4 tests)
+   - should compute correct ETA for 4-call expert manifest
+   - should maintain spacing between calls
+   - should handle mixed tier manifest
+   - should return schedule with all required fields
+
+✅ fifoScheduler (2 tests)
+   - should build schedule from timing
+   - should include required call fields
+
+✅ statusManager (6 tests)
+   - should initialize status
+   - should update progress
+   - should compute progress percentage
+   - should return null for unknown status
+   - should handle multiple concurrent statuses
+   - [PLUS 1 additional test]
+
+✅ orchestrator (4 tests)
+   - should instantiate with resultId
+   - should have all helper instances
+   - should track call completion
+   - should allow custom helpers
+
+✅ smartPoller (7 tests)
+   - should assign task
+   - should update progress
+   - should mark task complete
+   - should mark task error
+   - should return null for unknown task
+   - should return active tasks
+   - [PLUS 1 additional test]
 ```
 
-**Expected Output**: All unit tests passing (27+ assertions)
+**Total**: ✅ **All unit tests passed!** (23+ assertions)
 
-**Acceptance Criteria**: ✅ All Phase 1 unit tests pass
+**Acceptance Criteria**: ✅ All Phase 1 unit tests pass — CONFIRMED
 
 ---
 
