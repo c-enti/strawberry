@@ -1,6 +1,9 @@
 # Export 400 Fix: Implementation Approach Decision
 
 **Date**: December 30, 2025 @ 6:35PM
+**Branch**: `feat/B_Frontend_option2` (documentation)  
+**Directory**: `docs/current_design/`
+
 **Decision**: Option A - Clean Break (No Backwards Compatibility)  
 **Status**: Approved - Ready for Implementation in `feat/export-400-fix_02`
 
