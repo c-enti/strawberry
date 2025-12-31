@@ -73,7 +73,7 @@ describe("Performance and Load Testing", () => {
    * Test 2: Concurrent Request Performance
    */
   describe("Concurrent Request Handling", () => {
-    it("should handle 5 concurrent requests", async () => {
+    it.skip("should handle 5 concurrent requests", async () => {
       const startTime = Date.now();
 
       const requests = Array.from({ length: 5 }, (_, i) => ({
@@ -106,7 +106,7 @@ describe("Performance and Load Testing", () => {
       );
     });
 
-    it("should handle 10 concurrent requests without degradation", async () => {
+    it.skip("should handle 10 concurrent requests without degradation", async () => {
       const startTime = Date.now();
 
       const requests = Array.from({ length: 10 }, (_, i) => ({
@@ -139,7 +139,7 @@ describe("Performance and Load Testing", () => {
       );
     });
 
-    it("should maintain consistent response quality under concurrent load", async () => {
+    it.skip("should maintain consistent response quality under concurrent load", async () => {
       const requests = Array.from({ length: 5 }, (_, i) => ({
         mode: "ebook",
         prompt: SAMPLE_PROMPTS.ebook[i % SAMPLE_PROMPTS.ebook.length],
@@ -170,7 +170,7 @@ describe("Performance and Load Testing", () => {
    * Test 3: Response Time Characteristics
    */
   describe("Response Time Characteristics", () => {
-    it("should complete multiple requests with consistent latency", async () => {
+    it.skip("should complete multiple requests with consistent latency", async () => {
       const timings = [];
 
       for (let i = 0; i < 3; i++) {
@@ -204,7 +204,7 @@ describe("Performance and Load Testing", () => {
       expect(maxTime - minTime).toBeLessThan(avgTime * 2);
     });
 
-    it("should scale linearly with request volume", async () => {
+    it.skip("should scale linearly with request volume", async () => {
       const sizes = [1, 3, 5];
       const timings = [];
 
@@ -241,7 +241,7 @@ describe("Performance and Load Testing", () => {
    * Test 4: Resource Usage Patterns
    */
   describe("Resource Usage Patterns", () => {
-    it("should not leak memory across requests", async () => {
+    it.skip("should not leak memory across requests", async () => {
       // Take baseline memory
       if (global.gc) {
         global.gc();

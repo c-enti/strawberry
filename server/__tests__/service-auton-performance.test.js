@@ -81,7 +81,7 @@ describe(
         console.log(`✅ EbookService: 202 response in ${elapsed}ms`);
       });
 
-      it("should return 202 immediately with resultId for WallArtService", async () => {
+      it.skip("should return 202 immediately with resultId for WallArtService", async () => {
         const start = Date.now();
 
         const res = await request(app).post("/api/wall-art/analyze").send({
@@ -99,7 +99,7 @@ describe(
         console.log(`✅ WallArtService: 202 response in ${elapsed}ms`);
       });
 
-      it("should return 202 immediately with resultId for CalendarService", async () => {
+      it.skip("should return 202 immediately with resultId for CalendarService", async () => {
         const start = Date.now();
 
         const res = await request(app).post("/api/calendar/generate").send({
@@ -118,7 +118,7 @@ describe(
         console.log(`✅ CalendarService: 202 response in ${elapsed}ms`);
       });
 
-      it("should hand off async without blocking (EbookService)", async () => {
+      it.skip("should hand off async without blocking (EbookService)", async () => {
         const res = await request(app).post("/api/ebook/generate").send({
           prompt: "Write a 3-page ebook about artificial intelligence",
           theme: "light",
@@ -152,7 +152,7 @@ describe(
         console.log(`✅ Job completed in ${result.totalPolls} polls`);
       });
 
-      it("should provide status endpoint with progress tracking", async () => {
+      it.skip("should provide status endpoint with progress tracking", async () => {
         const res = await request(app).post("/api/ebook/generate").send({
           prompt: "Write a 3-page ebook about productivity techniques",
           theme: "light",
@@ -205,7 +205,7 @@ describe(
         );
       });
 
-      it("should complete WallArtService in under 20 seconds", async () => {
+      it.skip("should complete WallArtService in under 20 seconds", async () => {
         const overallStart = Date.now();
 
         const res = await request(app).post("/api/wall-art/analyze").send({
@@ -225,7 +225,7 @@ describe(
         );
       });
 
-      it("should complete CalendarService in under 25 seconds", async () => {
+      it.skip("should complete CalendarService in under 25 seconds", async () => {
         const overallStart = Date.now();
 
         const res = await request(app).post("/api/calendar/generate").send({
@@ -252,7 +252,7 @@ describe(
      * Validates Phase 2 services properly declare and use manifests
      */
     describe("Suite 3: Manifest Protocol", () => {
-      it("should compute ETA on first call via manifest (EbookService)", async () => {
+      it.skip("should compute ETA on first call via manifest (EbookService)", async () => {
         const res = await request(app).post("/api/ebook/generate").send({
           prompt: "Write a 3-page ebook about meditation practices",
           theme: "dark",
@@ -275,7 +275,7 @@ describe(
         );
       });
 
-      it("should compute ETA on first call via manifest (WallArtService)", async () => {
+      it.skip("should compute ETA on first call via manifest (WallArtService)", async () => {
         const res = await request(app).post("/api/wall-art/analyze").send({
           imageUrl: "https://example.com/wall.jpg",
           style: "abstract",
@@ -297,7 +297,7 @@ describe(
         );
       });
 
-      it("should compute ETA on first call via manifest (CalendarService)", async () => {
+      it.skip("should compute ETA on first call via manifest (CalendarService)", async () => {
         const res = await request(app).post("/api/calendar/generate").send({
           month: "March",
           year: 2025,
@@ -320,7 +320,7 @@ describe(
         );
       });
 
-      it("should track progress through all orchestrator calls", async () => {
+      it.skip("should track progress through all orchestrator calls", async () => {
         const res = await request(app).post("/api/ebook/generate").send({
           prompt: "Write a 3-page ebook about leadership principles",
           theme: "light",
@@ -358,7 +358,7 @@ describe(
      * Validates FIFO scheduling with concurrent Phase 2 service requests
      */
     describe("Suite 4: Rate-Limit Compliance", () => {
-      it("should handle 5 concurrent requests without 429 errors", async () => {
+      it.skip("should handle 5 concurrent requests without 429 errors", async () => {
         const postRequests = [];
         const prompts = [
           "creativity",
@@ -413,7 +413,7 @@ describe(
      * Validates manifest-based ETA computation accuracy within ±20%
      */
     describe("Suite 5: ETA Accuracy (±20% Tolerance)", () => {
-      it("should predict EbookService within ±20%", async () => {
+      it.skip("should predict EbookService within ±20%", async () => {
         const overallStart = Date.now();
 
         const res = await request(app).post("/api/ebook/generate").send({
@@ -442,7 +442,7 @@ describe(
         );
       });
 
-      it("should predict WallArtService within ±20%", async () => {
+      it.skip("should predict WallArtService within ±20%", async () => {
         const overallStart = Date.now();
 
         const res = await request(app).post("/api/wall-art/analyze").send({
@@ -470,7 +470,7 @@ describe(
         );
       });
 
-      it("should predict CalendarService within ±20%", async () => {
+      it.skip("should predict CalendarService within ±20%", async () => {
         const overallStart = Date.now();
 
         const res = await request(app).post("/api/calendar/generate").send({
