@@ -150,17 +150,19 @@
         {#if ebookResult}
           <div class="result-section">
             <h4>✅ eBook Generated Successfully!</h4>
-            {#if ebookResult.title}
-              <p><strong>Title:</strong> {ebookResult.title}</p>
-            {:else if ebookResult.metadata && ebookResult.metadata.title}
-              <p><strong>Title:</strong> {ebookResult.metadata.title}</p>
-            {/if}
-            {#if ebookResult.chapters}
-              <p><strong>Chapters:</strong> {ebookResult.chapters.length}</p>
-            {/if}
-            {#if ebookResult.metadata}
-              <p><strong>Theme:</strong> {ebookResult.metadata.theme}</p>
-              <p><strong>Pages:</strong> {ebookResult.metadata.pageCount}</p>
+            {#if ebookResult.out_envelope}
+              {#if ebookResult.out_envelope.metadata?.title}
+                <p><strong>Title:</strong> {ebookResult.out_envelope.metadata.title}</p>
+              {/if}
+              {#if ebookResult.out_envelope.pages}
+                <p><strong>Pages:</strong> {ebookResult.out_envelope.pages.length}</p>
+              {/if}
+              {#if ebookResult.out_envelope.metadata?.theme}
+                <p><strong>Theme:</strong> {ebookResult.out_envelope.metadata.theme}</p>
+              {/if}
+              {#if ebookResult.out_envelope.metadata?.pageCount}
+                <p><strong>Page Count:</strong> {ebookResult.out_envelope.metadata.pageCount}</p>
+              {/if}
             {/if}
             
             <div class="export-button-wrapper">
@@ -168,14 +170,17 @@
                 class="export-btn"
                 on:click={async () => {
                   try {
-                    // Export expects: { pages, metadata, actions }
-                    // Transform backend response to export format
-                    const exportPayload = {
-                      pages: ebookResult.chapters || [],
-                      html: ebookResult.html || null,
-                      metadata: ebookResult.metadata || {},
-                      actions: ebookResult.actions || {},
-                    };
+                    // Export expects canonical envelope: { pages, html, metadata, actions }
+                    if (!ebookResult.out_envelope) {
+                      throw new Error("Missing out_envelope in eBook result");
+                    }
+                    const exportPayload = ebookResult.out_envelope;
+                    
+                    // Validate pages exist
+                    if (!Array.isArray(exportPayload.pages) || exportPayload.pages.length === 0) {
+                      throw new Error("Cannot export: missing or empty pages array");
+                    }
+                    
                     // Use the export function from api
                     const { exportToPdf } = await import('./lib/api.js');
                     await exportToPdf(exportPayload);
@@ -188,33 +193,33 @@
               </button>
             </div>
             
-            {#if ebookResult.html}
+            {#if ebookResult.out_envelope?.html}
               <div class="preview-container">
                 <h5>Preview</h5>
                 <div class="ebook-preview">
-                  {@html ebookResult.html}
+                  {@html ebookResult.out_envelope.html}
                 </div>
               </div>
-            {:else if ebookResult.chapters}
-              <!-- Fallback: Show chapters array if HTML missing -->
+            {:else if ebookResult.out_envelope?.pages}
+              <!-- Fallback: Show pages array if HTML missing -->
               <div class="preview-container">
-                <h5>Preview (Chapters)</h5>
+                <h5>Preview (Pages)</h5>
                 <div class="ebook-chapters">
-                  {#each ebookResult.chapters as chapter}
+                  {#each ebookResult.out_envelope.pages as page}
                     <div class="chapter">
-                      <h6>{chapter.title}</h6>
-                      <p>{chapter.content}</p>
+                      <h6>{page.title}</h6>
+                      <p>{page.content}</p>
                     </div>
                   {/each}
                 </div>
               </div>
-            {:else if ebookResult.metadata}
+            {:else if ebookResult.out_envelope?.metadata}
               <!-- Fallback: Show theme preview -->
               <div class="preview-container">
                 <h5>Preview</h5>
                 <ThemePreview 
                   theme={ebookConfig.theme}
-                  pageCount={ebookResult.chapters ? ebookResult.chapters.length : 1}
+                  pageCount={ebookResult.out_envelope.pages?.length || 1}
                 />
               </div>
             {/if}

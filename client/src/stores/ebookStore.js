@@ -135,13 +135,22 @@ function createEbookStore() {
 
         // FIX 1.3: Add FRONTEND logging
         console.log("[FRONTEND] Response received:");
-        console.log("[FRONTEND] - html present:", !!response.html);
+        console.log(
+          "[FRONTEND] - out_envelope present:",
+          !!response.out_envelope
+        );
         console.log(
           "[FRONTEND] - html length:",
-          response.html?.length || "NULL"
+          response.out_envelope?.html?.length || "NULL"
         );
-        console.log("[FRONTEND] - title:", response.title);
-        console.log("[FRONTEND] - chapters:", response.chapters?.length || 0);
+        console.log(
+          "[FRONTEND] - title:",
+          response.out_envelope?.metadata?.title
+        );
+        console.log(
+          "[FRONTEND] - pages:",
+          response.out_envelope?.pages?.length || 0
+        );
 
         update((store) => ({
           ...store,

@@ -3371,14 +3371,14 @@ app.post("/api/ebook/generate/sync-deprecated", async (req, res) => {
         ? "dense"
         : "very-dense";
 
-    // Build response envelope matching frontend expectations
-    console.log("[ENDPOINT] Building response:");
-    console.log("[ENDPOINT] - chapters count:", envelope.pages?.length || 0);
+    // Build canonical response envelope (Option A: No backwards compatibility)
+    console.log("[ENDPOINT] Building canonical response:");
+    console.log("[ENDPOINT] - pages count:", envelope.pages?.length || 0);
     console.log("[ENDPOINT] - html present:", !!envelope.html);
     console.log("[ENDPOINT] - html length:", envelope.html?.length || "NULL");
     console.log("[ENDPOINT] - title:", envelope.metadata?.title || "NOT SET");
 
-    // WEEK 1: Extract actual title from first chapter instead of placeholder
+    // Extract actual title from first page instead of placeholder
     const actualTitle =
       envelope.pages?.[0]?.title ||
       envelope.metadata?.title ||
@@ -3387,26 +3387,27 @@ app.post("/api/ebook/generate/sync-deprecated", async (req, res) => {
     const responseObj = {
       id: ebookId,
       resultId: result.resultId,
-      chapters: envelope.pages,
-      html: envelope.html || null, // WEEK 1: Include composed HTML
-      title: actualTitle,
-      metadata: {
-        title: actualTitle,
-        author: "Aether AI",
-        theme,
-        pageCount: pageCountNum,
-        wordCount: (prompt || "").split(/\s+/).length,
-        colorPalette,
-        fontSizeScale,
-        density,
-        ...(envelope.metadata || {}),
-      },
-      actions: envelope.actions || {
-        persist_prompt: true,
-        generate_pdf: true,
-        can_export: true,
-        can_preview: true,
-        can_override: true,
+      out_envelope: {
+        pages: envelope.pages,
+        html: envelope.html || null,
+        metadata: {
+          title: actualTitle,
+          author: "Aether AI",
+          theme,
+          pageCount: pageCountNum,
+          wordCount: (prompt || "").split(/\s+/).length,
+          colorPalette,
+          fontSizeScale,
+          density,
+          ...(envelope.metadata || {}),
+        },
+        actions: envelope.actions || {
+          persist_prompt: true,
+          generate_pdf: true,
+          can_export: true,
+          can_preview: true,
+          can_override: true,
+        },
       },
     };
 

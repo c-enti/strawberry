@@ -68,13 +68,15 @@ async function fetchWithTimeout(url, options, timeoutMs) {
           ", "
         )}`
       );
-      if (data.html) {
+      if (data.out_envelope?.html) {
         console.log(
-          `[API] HTML content length: ${(data.html.length / 1024).toFixed(2)}KB`
+          `[API] HTML content length: ${(
+            data.out_envelope.html.length / 1024
+          ).toFixed(2)}KB`
         );
       }
-      if (data.chapters && Array.isArray(data.chapters)) {
-        console.log(`[API] Chapters count: ${data.chapters.length}`);
+      if (data.out_envelope?.pages && Array.isArray(data.out_envelope.pages)) {
+        console.log(`[API] Pages count: ${data.out_envelope.pages.length}`);
       }
       return data;
     } catch (parseErr) {
