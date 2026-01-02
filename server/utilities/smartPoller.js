@@ -33,7 +33,6 @@ class SmartPoller {
       calls_completed: 0,
       progress_percent: 0,
       message: "Job queued",
-      result: null,
       error: null,
       startedAt: Date.now(),
       lastUpdatedAt: Date.now(),
@@ -77,14 +76,14 @@ class SmartPoller {
   }
 
   /**
-   * Mark task complete and store result
+   * Mark task complete
+   * Note: Result persistence handled by genieService, not smartPoller
    */
-  markComplete(resultId, result) {
+  markComplete(resultId) {
     const task = this.tasks.get(resultId);
     if (!task) return;
 
     task.status = "complete";
-    task.result = result;
     task.progress_percent = 100;
     task.message = "Complete";
     task.completedAt = Date.now();
@@ -110,6 +109,7 @@ class SmartPoller {
 
   /**
    * Get status object for endpoint consumption
+   * Note: Returns status/progress metadata only. Results obtained from genieService.
    */
   getStatus(resultId) {
     const task = this.tasks.get(resultId);
@@ -122,7 +122,6 @@ class SmartPoller {
       calls_completed: task.calls_completed,
       progress_percent: task.progress_percent || 0,
       message: task.message,
-      result: task.result || null,
       error: task.error || null,
       startedAt: task.startedAt,
       lastUpdatedAt: task.lastUpdatedAt,

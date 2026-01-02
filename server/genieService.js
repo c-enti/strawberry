@@ -1638,12 +1638,52 @@ const genieService = {
   },
 };
 
+// ============================================================================
+// Result Persistence Layer (CONFORM_01+02)
+// ============================================================================
+// SmartPoller is lightweight (status/progress only).
+// genieService owns result persistence and retrieval.
+
+const resultCache = new Map(); // resultId -> result object
+
+/**
+ * Store result for later retrieval
+ * Called after successful service execution
+ * @param {string} resultId
+ * @param {object} result - { pages, html, metadata, ... }
+ */
+function storeResult(resultId, result) {
+  resultCache.set(resultId, result);
+  console.debug(`[genieService] Result stored: ${resultId}`);
+
+  // Clean up old results after 24 hours
+  setTimeout(() => {
+    resultCache.delete(resultId);
+    console.debug(`[genieService] Result expired and removed: ${resultId}`);
+  }, 24 * 60 * 60 * 1000);
+}
+
+/**
+ * Retrieve stored result
+ * @param {string} resultId
+ * @returns {object|null} result object or null if not found
+ */
+function getResult(resultId) {
+  const result = resultCache.get(resultId);
+  if (!result) {
+    console.warn(`[genieService] Result not found: ${resultId}`);
+  }
+  return result || null;
+}
+
 module.exports = {
   ...genieService,
   calculateCostForMode,
   getCallRequirements,
   calculateCostFromRequirements,
   buildRoutingMap,
+  storeResult,
+  getResult,
 };
 
 // Test helpers: allow injecting a mock dbUtils or sample service for unit tests
