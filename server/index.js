@@ -3004,8 +3004,9 @@ app.post("/api/ebook/generate", async (req, res) => {
       },
     })
     .then((result) => {
-      // Success: mark complete in smartPoller
-      smartPoller.markComplete(resultId, result);
+      // Success: store result in genieService, mark complete in smartPoller
+      genieService.storeResult(resultId, result);
+      smartPoller.markComplete(resultId);
       console.log(
         `[${new Date().toISOString()}] [PART-B] Job completed: ${resultId}`
       );
@@ -3085,8 +3086,9 @@ app.post("/api/wall-art/generate", async (req, res) => {
       dimensions,
     })
     .then((result) => {
-      // Success: mark complete in smartPoller
-      smartPoller.markComplete(resultId, result);
+      // Success: store result in genieService, mark complete in smartPoller
+      genieService.storeResult(resultId, result);
+      smartPoller.markComplete(resultId);
       console.log(
         `[${new Date().toISOString()}] [PART-B] Wall-art job completed: ${resultId}`
       );
@@ -3166,8 +3168,9 @@ app.post("/api/calendar/generate", async (req, res) => {
       theme,
     })
     .then((result) => {
-      // Success: mark complete in smartPoller
-      smartPoller.markComplete(resultId, result);
+      // Success: store result in genieService, mark complete in smartPoller
+      genieService.storeResult(resultId, result);
+      smartPoller.markComplete(resultId);
       console.log(
         `[${new Date().toISOString()}] [PART-B] Calendar job completed: ${resultId}`
       );
@@ -3204,7 +3207,7 @@ app.get("/api/status/:resultId", async (req, res) => {
       return res.status(404).json({ error: "Job not found", resultId });
     }
 
-    // Build response with canonical fields
+    // Build response with canonical fields (status/progress metadata only)
     const response = {
       resultId,
       status: taskStatus.status || "in-progress",
@@ -3216,7 +3219,6 @@ app.get("/api/status/:resultId", async (req, res) => {
       calls_completed: taskStatus.calls_completed || 0,
       progress_percent: taskStatus.progress_percent || 0,
       message: taskStatus.message || `Job ${taskStatus.status}`,
-      result: taskStatus.result || null,
     };
 
     if (taskStatus.error) {
@@ -3237,6 +3239,51 @@ app.get("/api/status/:resultId", async (req, res) => {
     res.json(response);
   } catch (err) {
     console.error("Status endpoint error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ============================================================================
+// GET /api/result/:resultId - Retrieve full result content
+// ============================================================================
+// Called after job completes to fetch pages, html, metadata for display/export
+app.get("/api/result/:resultId", async (req, res) => {
+  try {
+    const { resultId } = req.params;
+    const smartPoller = require("./utilities/smartPoller");
+    const genieService = require("./genieService");
+
+    const taskStatus = smartPoller.getStatus(resultId);
+
+    // Job not found
+    if (!taskStatus) {
+      return res.status(404).json({ error: "Job not found", resultId });
+    }
+
+    // Job still processing
+    if (taskStatus.status !== "complete") {
+      return res.status(202).json({
+        error: "Job still processing",
+        status: taskStatus.status,
+        progress_percent: taskStatus.progress_percent,
+      });
+    }
+
+    // Job complete, fetch result from genieService
+    const result = genieService.getResult(resultId);
+    if (!result) {
+      return res.status(500).json({
+        error: "Result not found (should not happen)",
+        resultId,
+      });
+    }
+
+    res.json({
+      status: "complete",
+      content: result,
+    });
+  } catch (err) {
+    console.error("Result endpoint error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
