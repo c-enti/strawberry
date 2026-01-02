@@ -761,3 +761,68 @@ export async function getCompatibleStyles(medium) {
     throw error;
   }
 }
+
+/**
+ * GET /api/status/:resultId
+ * Poll for job status and progress
+ * @param {string} resultId - The job ID
+ * @returns {Promise<Object>} { status, eta, calls_completed, calls_total, progress_percent, message }
+ */
+export async function getStatus(resultId) {
+  try {
+    const response = await fetchWithRetry(`/api/status/${resultId}`, {
+      method: "GET",
+      retryConfig: { maxRetries: 2 },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Job not found: ${resultId}`);
+      }
+      throw new Error(`Failed to get status: ${response.status}`);
+    }
+
+    const status = await response.json();
+    Logger.debug("Status fetched", { resultId, status: status.status });
+    return status;
+  } catch (error) {
+    Logger.error("Failed to get status", { error, resultId });
+    throw error;
+  }
+}
+
+/**
+ * GET /api/result/:resultId
+ * Fetch full result content when job is complete
+ * @param {string} resultId - The job ID
+ * @returns {Promise<Object>} { status, content } where content = { pages, html, metadata, ... }
+ */
+export async function getResult(resultId) {
+  try {
+    const response = await fetchWithRetry(`/api/result/${resultId}`, {
+      method: "GET",
+      retryConfig: { maxRetries: 2 },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Job not found: ${resultId}`);
+      }
+      if (response.status === 202) {
+        const data = await response.json();
+        const error = new Error("Job still processing");
+        error.status = 202;
+        error.progress = data;
+        throw error;
+      }
+      throw new Error(`Failed to get result: ${response.status}`);
+    }
+
+    const result = await response.json();
+    Logger.info("Result fetched", { resultId, status: result.status });
+    return result;
+  } catch (error) {
+    Logger.error("Failed to get result", { error, resultId });
+    throw error;
+  }
+}

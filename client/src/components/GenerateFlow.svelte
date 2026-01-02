@@ -14,7 +14,7 @@
 <script>
   import { onMount } from "svelte";
   import { flowStore, flowProgress } from "../lib/stores/flowStore.js";
-  import { classify, generate, applyOverride } from "../lib/api";
+  import { classify, generate, applyOverride, getStatus, getResult } from "../lib/api";
 
   // Import child components
   import MediaSelector from "./MediaSelector.svelte";
@@ -22,6 +22,7 @@
   import LoadingSpinner from "./Spinner.svelte";
   import ClassificationFeedback from "./ClassificationFeedback.svelte";
   import OverrideControls from "./OverrideControls.svelte";
+  import PollingStatus from "./PollingStatus.svelte";
   import ContentPreview from "./ContentPreview.svelte";
   import StatusDisplay from "./StatusDisplay.svelte";
   import Export from "./Export.svelte";
@@ -85,7 +86,7 @@
       }
     } catch (err) {
       flowStore.finishClassifying();
-      flowStore.setError(err, retryCount);
+      flowStore.setError(err);
       error = err.message;
     }
   }
@@ -112,12 +113,30 @@
         retryDelayMs
       );
 
+      // Handle 202 Accepted (async job started)
+      if (genResult.resultId && !genResult.out_envelope) {
+        // Job queued for async processing
+        flowStore.finishGenerating();
+        // Start polling in background (don't await)
+        pollUntilComplete(genResult.resultId);
+        return;
+      }
+
+      // Handle 201 Created (immediate result)
+      if (genResult.out_envelope) {
+        flowStore.setResult(genResult.out_envelope);
+        flowStore.finishGenerating();
+        flowStore.transitionTo("RESULT_READY");
+        return;
+      }
+
+      // Fallback for older API responses
       flowStore.setResult(genResult);
       flowStore.finishGenerating();
       flowStore.transitionTo("RESULT_READY");
     } catch (err) {
       flowStore.finishGenerating();
-      flowStore.setError(err, retryCount);
+      flowStore.setError(err);
       // Go back to classification for retry
       flowStore.transitionTo("CLASSIFICATION_READY");
       error = err.message;
@@ -156,7 +175,7 @@
       flowStore.transitionTo("RESULT_READY");
     } catch (err) {
       flowStore.finishOverriding();
-      flowStore.setError(err, retryCount);
+      flowStore.setError(err);
       // Stay in OVERRIDE_ACTIVE to allow retry
       error = err.message;
     }
@@ -187,6 +206,86 @@
       }
     }
     throw lastError;
+  }
+
+  /**
+   * Poll for job completion and fetch result
+   * Called with 202 Accepted response containing resultId
+   */
+  async function pollUntilComplete(resultId) {
+    const MAX_ATTEMPTS = 600; // 20 minutes with 2s interval
+    const POLL_INTERVAL_MS = 2000;
+    const PROGRESS_TIMEOUT_MS = 60000; // 1 minute timeout per poll
+
+    flowStore.setState("POLLING");
+    flowStore.setResultId(resultId);
+
+    try {
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        try {
+          // Fetch status with timeout
+          const statusPromise = getStatus(resultId);
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error("Status poll timeout")),
+              PROGRESS_TIMEOUT_MS
+            )
+          );
+
+          const status = await Promise.race([statusPromise, timeoutPromise]);
+
+          // Update progress in store
+          flowStore.updateProgress({
+            status: status.status,
+            progress_percent: status.progress_percent || 0,
+            eta: status.eta,
+            calls_completed: status.calls_completed,
+            calls_total: status.calls_total,
+            message: status.message,
+          });
+
+          // If complete, fetch the result
+          if (status.status === "complete") {
+            const result = await getResult(resultId);
+            flowStore.setResult(result.content || result.out_envelope);
+            flowStore.transitionTo("RESULT_READY");
+            return;
+          }
+
+          // Wait before next poll
+          await new Promise((resolve) =>
+            setTimeout(resolve, POLL_INTERVAL_MS)
+          );
+        } catch (pollErr) {
+          console.warn(`Poll attempt ${attempt + 1} failed:`, pollErr.message);
+
+          // Retry on timeout or transient errors
+          if (
+            pollErr.message.includes("timeout") ||
+            pollErr.status === 429 ||
+            pollErr.status >= 500
+          ) {
+            if (attempt < MAX_ATTEMPTS - 1) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, POLL_INTERVAL_MS)
+              );
+              continue;
+            }
+          }
+
+          throw pollErr;
+        }
+      }
+
+      // Max attempts reached
+      throw new Error(
+        `Polling timeout after ${MAX_ATTEMPTS} attempts (${(MAX_ATTEMPTS * POLL_INTERVAL_MS) / 1000 / 60} minutes)`
+      );
+    } catch (err) {
+      flowStore.setError(err);
+      flowStore.transitionTo("ERROR");
+      console.error("Polling error:", err);
+    }
   }
 
   /**
@@ -252,6 +351,8 @@
         {:else}
           Processing...
         {/if}
+      {:else if $flowStore.state === "POLLING"}
+        Polling for result...
       {:else if $flowStore.state === "CLASSIFICATION_READY"}
         Review classification (accept or override)
       {:else if $flowStore.state === "RESULT_READY"}
@@ -313,6 +414,13 @@
         ? "Analyzing your prompt..."
         : "Generating your content..."}
     />
+  {/if}
+
+  <!-- Flow state: POLLING (async job in progress) -->
+  {#if $flowStore.state === "POLLING"}
+    <div class="flow-section">
+      <PollingStatus />
+    </div>
   {/if}
 
   <!-- Flow state: CLASSIFICATION_READY (user review) -->

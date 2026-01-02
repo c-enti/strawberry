@@ -760,11 +760,27 @@ app.post("/api/generate", async (req, res, next) => {
       ...(req.body.options && { options: req.body.options }),
     };
 
-    // Process
+    // Process (async, returns immediately with resultId)
     const result = await genieService.process(payload);
+    const { resultId, out_envelope } = result;
 
-    // Return
-    return res.status(201).json(result);
+    // Store result for later retrieval, then return 202 Accepted
+    if (out_envelope) {
+      genieService.storeResult(resultId, out_envelope);
+      smartPoller.markComplete(resultId);
+
+      // Return full result immediately (PART-A synchronous case)
+      return res.status(201).json({
+        resultId,
+        out_envelope,
+      });
+    }
+
+    // Return 202 Accepted with resultId for async case
+    return res.status(202).json({
+      resultId,
+      message: "Generation started, poll /api/status/:resultId for progress",
+    });
   } catch (err) {
     err.status = err.status || 500;
     err.code = err.code || "GENERATION_ERROR";
