@@ -113,27 +113,18 @@
         retryDelayMs
       );
 
-      // Handle 202 Accepted (async job started)
-      if (genResult.resultId && !genResult.out_envelope) {
-        // Job queued for async processing
+      // All responses from /api/generate are now 202 Accepted with resultId
+      // Frontend always polls for completion regardless of sync/async execution
+      if (genResult.resultId) {
+        // Job submitted for processing - start polling
         flowStore.finishGenerating();
-        // Start polling in background (don't await)
+        // Start polling in background (don't await - let it run independently)
         pollUntilComplete(genResult.resultId);
         return;
       }
 
-      // Handle 201 Created (immediate result)
-      if (genResult.out_envelope) {
-        flowStore.setResult(genResult.out_envelope);
-        flowStore.finishGenerating();
-        flowStore.transitionTo("RESULT_READY");
-        return;
-      }
-
-      // Fallback for older API responses
-      flowStore.setResult(genResult);
-      flowStore.finishGenerating();
-      flowStore.transitionTo("RESULT_READY");
+      // Should not reach here - server always returns resultId
+      throw new Error("Server error: no resultId in response");
     } catch (err) {
       flowStore.finishGenerating();
       flowStore.setError(err);

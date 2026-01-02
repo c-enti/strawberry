@@ -764,19 +764,17 @@ app.post("/api/generate", async (req, res, next) => {
     const result = await genieService.process(payload);
     const { resultId, out_envelope } = result;
 
-    // Store result for later retrieval, then return 202 Accepted
+    // Store result for later retrieval via /api/result
+    // Always return 202 Accepted with resultId for consistent polling pattern
     if (out_envelope) {
+      // Job completed synchronously (e.g., cached result)
       genieService.storeResult(resultId, out_envelope);
       smartPoller.markComplete(resultId);
-
-      // Return full result immediately (PART-A synchronous case)
-      return res.status(201).json({
-        resultId,
-        out_envelope,
-      });
+      // Still return 202 so frontend uses consistent polling mechanism
     }
 
-    // Return 202 Accepted with resultId for async case
+    // Return 202 Accepted with just resultId
+    // Frontend will poll /api/status to check progress and /api/result for final content
     return res.status(202).json({
       resultId,
       message: "Generation started, poll /api/status/:resultId for progress",
