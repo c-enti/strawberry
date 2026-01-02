@@ -281,34 +281,34 @@ async function handleAcceptClassification() {
 
 ### Phase 1: State Management
 
-- [ ] Add `POLLING` state to `flowStore`
-- [ ] Add `updateProgress()` method to flowStore
-- [ ] Add `updateETA()` method to flowStore
-- [ ] Define state transition rules (GENERATING → POLLING → RESULT_READY)
+- [x] Add `POLLING` state to `flowStore`
+- [x] Add `updateProgress()` method to flowStore
+- [x] Add `updateETA()` method to flowStore
+- [x] Define state transition rules (GENERATING → POLLING → RESULT_READY)
 
 ### Phase 2: Polling Logic
 
-- [ ] Create `pollUntilComplete(resultId)` function
-- [ ] Create `fetchContent(resultId)` function
-- [ ] Implement max retry/timeout handling (10 minutes)
-- [ ] Add error handling for network failures
-- [ ] Add progress/ETA forwarding to UI
+- [x] Create `pollUntilComplete(resultId)` function
+- [x] Create `fetchContent(resultId)` function
+- [x] Implement max retry/timeout handling (10 minutes)
+- [x] Add error handling for network failures
+- [x] Add progress/ETA forwarding to UI
 
 ### Phase 3: UI Components
 
-- [ ] Create or extend `PollingStatus.svelte` component
-- [ ] Add spinner/animation
-- [ ] Add "Working on it..." messaging
-- [ ] Add progress bar (conditional, if progress available)
-- [ ] Add ETA display (conditional, if ETA available)
-- [ ] Add cancel button (optional, stops polling)
+- [x] Create or extend `PollingStatus.svelte` component
+- [x] Add spinner/animation
+- [x] Add "Working on it..." messaging
+- [x] Add progress bar (conditional, if progress available)
+- [x] Add ETA display (conditional, if ETA available)
+- [x] Add cancel button (optional, stops polling)
 
 ### Phase 4: Integration
 
-- [ ] Integrate polling logic into `GenerateFlow.svelte`
-- [ ] Update `handleAcceptClassification()` to use polling
-- [ ] Test flow: Generate → Poll → Fetch → Display
-- [ ] Verify export only works when content actually available
+- [x] Integrate polling logic into `GenerateFlow.svelte`
+- [x] Update `handleAcceptClassification()` to use polling
+- [x] Test flow: Generate → Poll → Fetch → Display
+- [x] Verify export only works when content actually available
 
 ### Phase 5: Testing
 
