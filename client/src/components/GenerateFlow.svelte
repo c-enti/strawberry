@@ -100,7 +100,7 @@
     retryCount = 0;
 
     try {
-      // Call /api/generate with classification
+      // Step 1: Call /api/generate (returns 202 with resultId)
       const genResult = await withRetry(
         () =>
           generate({
@@ -112,15 +112,32 @@
         retryDelayMs
       );
 
-      flowStore.setResult(genResult);
+      // CONFORM_02: Step 2 - Transition to POLLING state instead of RESULT_READY
       flowStore.finishGenerating();
+      flowStore.transitionTo("POLLING");
+      console.log(
+        `[CONFORM_02] Transitioned to POLLING for resultId: ${genResult.resultId}`
+      );
+
+      // CONFORM_02: Step 3 - Poll until job complete
+      await pollUntilComplete(genResult.resultId);
+
+      // CONFORM_02: Step 4 - Fetch actual content from result endpoint
+      const content = await fetchContent(genResult.resultId);
+
+      // CONFORM_02: Step 5 - Now transition to RESULT_READY with actual content
+      flowStore.setResult({
+        ...genResult,
+        ...content, // pages, html, metadata, etc.
+      });
       flowStore.transitionTo("RESULT_READY");
+      console.log(`[CONFORM_02] Content ready, transitioned to RESULT_READY`);
     } catch (err) {
       flowStore.finishGenerating();
       flowStore.setError(err, retryCount);
-      // Go back to classification for retry
-      flowStore.transitionTo("CLASSIFICATION_READY");
+      flowStore.transitionTo("ERROR");
       error = err.message;
+      console.error(`[CONFORM_02] Error in generation/polling flow:`, err);
     }
   }
 
@@ -187,6 +204,101 @@
       }
     }
     throw lastError;
+  }
+
+  /**
+   * CONFORM_02: Poll backend until job completes
+   * Called after 202 response received
+   * Transitions state to RESULT_READY when complete
+   */
+  async function pollUntilComplete(resultId) {
+    const MAX_ATTEMPTS = 600; // 10 minutes at 1-second intervals
+    const POLL_INTERVAL_MS = 1000; // 1 second between polls
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        // Fetch status from backend
+        const statusResponse = await fetch(`/api/status/${resultId}`);
+
+        if (!statusResponse.ok) {
+          throw new Error(`Status check failed: ${statusResponse.status}`);
+        }
+
+        const statusData = await statusResponse.json();
+
+        // Check for error state
+        if (statusData.error) {
+          throw new Error(statusData.error.message || "Job failed");
+        }
+
+        // Check for completion
+        // Backend should indicate completion via one of:
+        // - statusData.complete === true
+        // - statusData.state === "complete"
+        // - statusData.job_state === "complete"
+        if (statusData.complete === true || statusData.state === "complete") {
+          // Job complete, exit polling loop
+          console.log(`[POLLING] Job complete: ${resultId}`);
+          return;
+        }
+
+        // Optional: Update UI with progress
+        if (statusData.progress) {
+          flowStore.updateProgress({
+            current: statusData.progress.current,
+            total: statusData.progress.total,
+            percent: statusData.progress.percent,
+            message: statusData.progress.message,
+          });
+          console.log(
+            `[POLLING] Progress: ${statusData.progress.percent}% (${statusData.progress.message})`
+          );
+        }
+
+        // Optional: Update UI with ETA
+        if (statusData.eta) {
+          flowStore.updateETA(statusData.eta);
+          console.log(
+            `[POLLING] ETA: ${Math.round(statusData.eta / 1000)}s remaining`
+          );
+        }
+
+        // Still processing, wait before next poll
+        await new Promise((resolve) =>
+          setTimeout(resolve, POLL_INTERVAL_MS)
+        );
+      } catch (err) {
+        // Polling error (network, etc.)
+        throw new Error(`Polling error: ${err.message}`);
+      }
+    }
+
+    // Timeout: job did not complete within max attempts
+    throw new Error("Job did not complete within 10 minutes");
+  }
+
+  /**
+   * CONFORM_02: Fetch generated content from backend
+   * Called after polling completes (job is done)
+   */
+  async function fetchContent(resultId) {
+    const response = await fetch(`/api/result/${resultId}`);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("Content not found (expired or invalid)");
+      }
+      throw new Error(`Failed to retrieve content: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.content) {
+      throw new Error("Invalid response: missing content");
+    }
+
+    console.log(`[POLLING] Content fetched for ${resultId}`);
+    return data.content;
   }
 
   /**
