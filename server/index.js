@@ -3004,6 +3004,9 @@ app.post("/api/ebook/generate", async (req, res) => {
       },
     })
     .then((result) => {
+      // CONFORM_01: Store result in genieService cache
+      genieService.storeResult(resultId, result);
+
       // Success: mark complete in smartPoller
       smartPoller.markComplete(resultId, result);
       console.log(
@@ -3085,6 +3088,9 @@ app.post("/api/wall-art/generate", async (req, res) => {
       dimensions,
     })
     .then((result) => {
+      // CONFORM_01: Store result in genieService cache
+      genieService.storeResult(resultId, result);
+
       // Success: mark complete in smartPoller
       smartPoller.markComplete(resultId, result);
       console.log(
@@ -3166,6 +3172,9 @@ app.post("/api/calendar/generate", async (req, res) => {
       theme,
     })
     .then((result) => {
+      // CONFORM_01: Store result in genieService cache
+      genieService.storeResult(resultId, result);
+
       // Success: mark complete in smartPoller
       smartPoller.markComplete(resultId, result);
       console.log(
@@ -3184,6 +3193,55 @@ app.post("/api/calendar/generate", async (req, res) => {
         err
       );
     });
+});
+
+/**
+ * GET /api/result/:resultId (CONFORM_01: RESULT RETRIEVAL ENDPOINT)
+ *
+ * Returns the generated content packet for frontend display and export
+ * Frontend calls this when status is "complete"
+ *
+ * Response: { resultId, status: "complete", content: { pages, html, metadata, type } }
+ * Or 404 if result not found
+ */
+app.get("/api/result/:resultId", async (req, res) => {
+  try {
+    const { resultId } = req.params;
+
+    if (!resultId) {
+      return res.status(400).json({
+        error: "resultId is required",
+        code: "MISSING_RESULT_ID",
+      });
+    }
+
+    // Retrieve result from genieService cache
+    const result = genieService.getResult(resultId);
+
+    if (!result) {
+      return res.status(404).json({
+        error: "Result not found",
+        code: "RESULT_NOT_FOUND",
+        resultId,
+      });
+    }
+
+    // Return result in format frontend expects
+    return res.status(200).json({
+      resultId,
+      status: "complete",
+      content: result,
+    });
+  } catch (err) {
+    console.error(
+      `[GET /api/result/:resultId] Error retrieving result:`,
+      err.message
+    );
+    return res.status(500).json({
+      error: "Failed to retrieve result",
+      code: "RESULT_RETRIEVAL_ERROR",
+    });
+  }
 });
 
 /**

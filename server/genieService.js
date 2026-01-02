@@ -1636,6 +1636,98 @@ const genieService = {
       throw err;
     }
   },
+
+  /**
+   * CONFORM_01: Result Cache Management
+   * Stores generated results keyed by resultId for frontend retrieval
+   */
+  resultCache: new Map(), // resultId → { pages, html, metadata, type, timestamp }
+
+  /**
+   * Store result for later retrieval by frontend
+   * Called by HTTP handlers after genieService.process() completes
+   */
+  storeResult(resultId, result) {
+    if (!resultId || !result) {
+      console.warn("[genieService] storeResult: missing resultId or result", {
+        resultId,
+        result: !!result,
+      });
+      return;
+    }
+
+    this.resultCache.set(resultId, {
+      ...result,
+      timestamp: Date.now(),
+    });
+
+    console.log(
+      `[genieService] Result stored for ${resultId} (cache size: ${this.resultCache.size})`
+    );
+  },
+
+  /**
+   * Retrieve stored result for frontend delivery
+   * Returns result or null if not found/expired
+   */
+  getResult(resultId) {
+    if (!resultId) {
+      console.warn("[genieService] getResult: missing resultId");
+      return null;
+    }
+
+    const result = this.resultCache.get(resultId);
+
+    if (!result) {
+      console.debug(`[genieService] Result not found for ${resultId}`);
+      return null;
+    }
+
+    // Optional: check TTL (24 hours)
+    const RESULT_TTL_MS = 24 * 60 * 60 * 1000;
+    const age = Date.now() - result.timestamp;
+
+    if (age > RESULT_TTL_MS) {
+      console.warn(
+        `[genieService] Result ${resultId} expired (age: ${Math.round(
+          age / 1000
+        )}s)`
+      );
+      this.resultCache.delete(resultId);
+      return null;
+    }
+
+    console.debug(
+      `[genieService] Result retrieved for ${resultId} (age: ${Math.round(
+        age / 1000
+      )}s)`
+    );
+
+    return result;
+  },
+
+  /**
+   * Clear a specific result from cache
+   */
+  clearResult(resultId) {
+    if (this.resultCache.delete(resultId)) {
+      console.log(`[genieService] Result cache cleared for ${resultId}`);
+    }
+  },
+
+  /**
+   * Get cache stats for debugging
+   */
+  getCacheStats() {
+    return {
+      size: this.resultCache.size,
+      entries: Array.from(this.resultCache.entries()).map(([id, result]) => ({
+        resultId: id,
+        timestamp: result.timestamp,
+        age: Date.now() - result.timestamp,
+      })),
+    };
+  },
 };
 
 module.exports = {
