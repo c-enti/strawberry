@@ -8,6 +8,7 @@ const STATES = {
   INITIAL: "INITIAL",
   MEDIUM_SELECTED: "MEDIUM_SELECTED",
   GENERATING: "GENERATING",
+  POLLING: "POLLING", // CONFORM_02: New state for job polling phase
   CLASSIFICATION_READY: "CLASSIFICATION_READY",
   RESULT_READY: "RESULT_READY",
   OVERRIDE_ACTIVE: "OVERRIDE_ACTIVE",
@@ -25,8 +26,14 @@ const VALID_TRANSITIONS = {
   [STATES.MEDIUM_SELECTED]: [STATES.GENERATING, STATES.INITIAL],
   [STATES.GENERATING]: [
     STATES.CLASSIFICATION_READY,
+    STATES.POLLING, // CONFORM_02: New transition for async jobs (202 response)
     STATES.RESULT_READY,
     STATES.ERROR,
+  ],
+  [STATES.POLLING]: [
+    // CONFORM_02: New state transitions for polling phase
+    STATES.RESULT_READY, // Job complete, content ready
+    STATES.ERROR, // Polling timeout or job failed
   ],
   [STATES.CLASSIFICATION_READY]: [
     STATES.GENERATING,
@@ -50,7 +57,7 @@ const VALID_TRANSITIONS = {
 };
 
 /**
- * Create the flow store with 8-state machine
+ * Create the flow store with 9-state machine (added POLLING state)
  */
 function createFlowStore() {
   const { subscribe, set, update } = writable({
@@ -63,6 +70,9 @@ function createFlowStore() {
     overrideCost: 0,
     error: null,
     startTime: null, // For elapsed time tracking
+    // CONFORM_02: Polling state tracking
+    pollingProgress: null, // { current, total, percent, message }
+    pollingETA: null, // milliseconds remaining
   });
 
   return {
@@ -148,6 +158,22 @@ function createFlowStore() {
     },
 
     /**
+     * CONFORM_02: Update polling progress
+     * @param {Object} progressObj - { current, total, percent, message }
+     */
+    updateProgress(progressObj) {
+      update((store) => ({ ...store, pollingProgress: progressObj }));
+    },
+
+    /**
+     * CONFORM_02: Update polling ETA
+     * @param {number} etaMs - Milliseconds remaining
+     */
+    updateETA(etaMs) {
+      update((store) => ({ ...store, pollingETA: etaMs }));
+    },
+
+    /**
      * Set an error
      * @param {Object} errorObj - Error object with {status, message, retryable}
      */
@@ -169,6 +195,8 @@ function createFlowStore() {
         overrideCost: 0,
         error: null,
         startTime: null,
+        pollingProgress: null,
+        pollingETA: null,
       });
     },
   };
@@ -187,6 +215,7 @@ export const flowProgress = derived(flowStore, ($flowStore) => {
     [STATES.INITIAL]: 0,
     [STATES.MEDIUM_SELECTED]: 10,
     [STATES.GENERATING]: 50,
+    [STATES.POLLING]: $flowStore.pollingProgress?.percent || 50, // Use actual progress if available
     [STATES.CLASSIFICATION_READY]: 60,
     [STATES.RESULT_READY]: 90,
     [STATES.OVERRIDE_ACTIVE]: 70,
@@ -200,7 +229,7 @@ export const flowProgress = derived(flowStore, ($flowStore) => {
 export const isFlowIdle = derived(flowStore, ($flowStore) => {
   // A component checking if flow is idle would need access to loading states
   // Since the lib version has minimal state, we check the state directly
-  return ![STATES.GENERATING, STATES.OVERRIDE_ACTIVE].includes(
+  return ![STATES.GENERATING, STATES.POLLING, STATES.OVERRIDE_ACTIVE].includes(
     $flowStore.state
   );
 });
