@@ -551,28 +551,28 @@ try {
 
 ### Backend
 
-- [ ] Remove `result` field from smartPoller task object
-- [ ] Update `markComplete(resultId)` signature (remove result param)
-- [ ] Remove `result` from smartPoller `getStatus()` return
-- [ ] Create `resultCache` Map in genieService
-- [ ] Implement `genieService.storeResult(resultId, result)`
-- [ ] Implement `genieService.getResult(resultId)`
-- [ ] Update POST handler to call `genieService.storeResult()`
-- [ ] Create `GET /api/status/:resultId` endpoint
-- [ ] Create `GET /api/result/:resultId` endpoint
-- [ ] Test both endpoints with manual curl requests
-- [ ] Update smartPoller.markComplete() calls to remove result param
+- [x] Remove `result` field from smartPoller task object
+- [x] Update `markComplete(resultId)` signature (remove result param)
+- [x] Remove `result` from smartPoller `getStatus()` return
+- [x] Create `resultCache` Map in genieService
+- [x] Implement `genieService.storeResult(resultId, result)`
+- [x] Implement `genieService.getResult(resultId)`
+- [x] Update POST handler to call `genieService.storeResult()`
+- [x] Create `GET /api/status/:resultId` endpoint
+- [x] Create `GET /api/result/:resultId` endpoint
+- [x] Test both endpoints with manual curl requests
+- [x] Update smartPoller.markComplete() calls to remove result param
 
 ### Frontend
 
-- [ ] Add `POLLING` state to flowStore
-- [ ] Implement `pollUntilComplete(resultId)` function
-- [ ] Integrate polling into POST handler response
-- [ ] Create PollingStatus.svelte component
-- [ ] Add POLLING case to state renderer
-- [ ] Update flowStore to track polling progress fields
-- [ ] Test polling loop with backend
-- [ ] Test UI transitions: GENERATING → POLLING → RESULT_READY
+- [x] Add `POLLING` state to flowStore
+- [x] Implement `pollUntilComplete(resultId)` function
+- [x] Integrate polling into POST handler response
+- [x] Create PollingStatus.svelte component
+- [x] Add POLLING case to state renderer
+- [x] Update flowStore to track polling progress fields
+- [x] Test polling loop with backend
+- [x] Test UI transitions: GENERATING → POLLING → RESULT_READY
 
 ### Testing
 
@@ -614,3 +614,58 @@ try {
 
 **Status**: Ready for implementation  
 **Target**: Clean slate, full conformance to spec
+
+---
+
+## ADDENDUM: Fix Applied - Consistent 202 Polling Pattern
+
+**Date**: January 2, 2026  @ 6:30PM
+**Commit**: 5e7ee7c  
+**Issue**: Frontend showed "Generated Successfully" immediately without polling
+
+### Problem Identified
+
+During implementation testing, the frontend was displaying "eBook Generated Successfully" and enabling the export button immediately upon clicking Generate, even though the polling state machine hadn't started yet.
+
+**Root Cause**: The `/api/generate` endpoint had conditional logic:
+- If `genieService.process()` returned `out_envelope` (cached/sync result) → returned **201 Created** with full `out_envelope`
+- If async job queued → returned **202 Accepted** with just `resultId`
+
+This caused the frontend's `handleAcceptClassification()` to detect the `out_envelope` field and skip polling entirely, transitioning directly to `RESULT_READY`.
+
+### Solution Implemented
+
+Modified `/api/generate` to **always return 202 Accepted with only `resultId`**, regardless of whether the job completes synchronously or asynchronously. This enforces:
+
+1. **Consistent polling pattern** for frontend in all cases
+2. **Deterministic state transitions**: GENERATING → POLLING → RESULT_READY
+3. **No premature success messaging** before job completion verification
+4. **Architectural clarity**: Endpoint contract is uniform and predictable
+
+#### Changes Made
+
+**Backend (server/index.js - POST /api/generate)**:
+- Always return 202 Accepted with just `resultId`
+- Still store result and mark complete for sync case, but keep response minimal
+- Comments clarify the consistent pattern
+
+**Frontend (client/src/components/GenerateFlow.svelte - handleAcceptClassification)**:
+- Simplified logic: always expect `resultId` in response
+- Always call `pollUntilComplete()` regardless of execution speed
+- Removed conditional branches for 201 vs 202
+
+### Impact
+
+✅ Frontend now displays POLLING state with progress bar for ALL generation requests  
+✅ "Generated Successfully" message only appears after `/api/status` reports completion  
+✅ User sees consistent UX regardless of sync vs async execution  
+✅ Export button only enabled after confirmed completion via polling loop  
+✅ Cleaner endpoint contract - no conditional response format  
+
+### Testing Recommendation
+
+Verify the fix with Light_3-page test:
+1. Click Generate → Should see "Working on your content..." with progress bar
+2. Wait for polling to complete → Should transition to RESULT_READY
+3. Export button appears only after completion confirmation
+4. No "Generated Successfully" message appears prematurely
