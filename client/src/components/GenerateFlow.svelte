@@ -24,6 +24,7 @@
   import OverrideControls from "./OverrideControls.svelte";
   import ContentPreview from "./ContentPreview.svelte";
   import StatusDisplay from "./StatusDisplay.svelte";
+  import PollingStatus from "./PollingStatus.svelte"; // CONFORM_02: UI for polling phase
   import Export from "./Export.svelte";
 
   let error = null;
@@ -425,6 +426,14 @@
         ? "Analyzing your prompt..."
         : "Generating your content..."}
     />
+  {/if}
+
+  <!-- Flow state: POLLING (show polling status with progress) -->
+  <!-- CONFORM_02: New UI for job polling phase -->
+  {#if $flowStore.state === "POLLING"}
+    <div class="flow-section">
+      <PollingStatus />
+    </div>
   {/if}
 
   <!-- Flow state: CLASSIFICATION_READY (user review) -->
